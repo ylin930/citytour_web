@@ -1,0 +1,122 @@
+<!doctype html>
+<html lang="en">
+    <head>
+        <meta charset="utf-8" />
+        <title>City Tour – Start</title>
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+        <link rel="stylesheet" href="/styles.css?v=2" />
+    </head>
+    <body>
+        <main class="container">
+            <header class="header">
+                <div>
+                    <div class="header">CITY TOUR STUDY</div>
+                    <div class="body" id="title">Choose your language</div>
+                    <div class="sub" id="subtitle">Bitte wählen Sie Ihre Sprache • Please select your language</div>
+                </div>
+            </header>
+
+            <section class="grid">
+                <div class="card">
+                    <div class="sub" id="langLabel">Languages</div>
+
+                    <!-- Translatable notice -->
+                    <div class="footerNote" id="note">
+                        <button class="btn" data-lang="EN">English</button>
+                        <button class="btn" data-lang="GER">Deutsch</button> <br />
+                        You can’t change language later in this session.<br />
+                        <span style="color: #777; font-size: 13px"
+                            >Die Sprache kann später nicht mehr geändert werden.</span
+                        >
+                    </div>
+                </div>
+
+                <!-- Country -->
+                <div class="card" style="margin-top: 12px">
+                    <div class="sub" id="countryLabel">Country</div>
+                    <div class="buttons">
+                        <button class="btn" data-country="US">United States</button>
+                        <button class="btn" data-country="DE">Germany</button>
+                    </div>
+                </div>
+
+                <!-- Participant Type -->
+                <div class="card" style="margin-top: 12px">
+                    <div class="sub" id="roleLabel">Participant</div>
+                    <div class="buttons">
+                        <button class="btn" data-role="adult">Adult</button>
+                        <button class="btn" data-role="child">Child</button>
+                    </div>
+                    <div class="footerNote" id="roleNote">(For children, accompanied by a parent/guardian.)</div>
+                </div>
+
+                <!-- Continue -->
+                <div class="progress"><span style="width: 10%"></span></div>
+                <div class="buttons" style="justify-content: flex-end">
+                    <button id="continue" class="btn primary" disabled>Continue</button>
+                </div>
+            </section>
+        </main>
+        <script>
+            // track 3 choices
+            let chosen = { lang: null, country: null, role: null };
+
+            // wire language buttons
+            document.querySelectorAll("[data-lang]").forEach((b) => {
+                b.addEventListener("click", () => {
+                    chosen.lang = b.dataset.lang;
+                    document.querySelectorAll("[data-lang]").forEach((x) => x.classList.remove("primary"));
+                    b.classList.add("primary");
+                    maybeEnableContinue();
+                });
+            });
+
+            // wire country buttons
+            document.querySelectorAll("[data-country]").forEach((b) => {
+                b.addEventListener("click", () => {
+                    chosen.country = b.dataset.country; // "US" or "DE"
+                    document.querySelectorAll("[data-country]").forEach((x) => x.classList.remove("primary"));
+                    b.classList.add("primary");
+                    maybeEnableContinue();
+                });
+            });
+
+            // wire role buttons
+            document.querySelectorAll("[data-role]").forEach((b) => {
+                b.addEventListener("click", () => {
+                    chosen.role = b.dataset.role; // "adult" or "child"
+                    document.querySelectorAll("[data-role]").forEach((x) => x.classList.remove("primary"));
+                    b.classList.add("primary");
+                    maybeEnableContinue();
+                });
+            });
+
+            const btn = document.getElementById("continue");
+            function maybeEnableContinue() {
+                btn.disabled = !(chosen.lang && chosen.country && chosen.role);
+                // Optional: adjust labels based on language
+                if (chosen.lang === "GER") {
+                    document.getElementById("countryLabel").textContent = "Land";
+                    document.getElementById("roleLabel").textContent = "Teilnehmertyp";
+                    document.getElementById("roleNote").textContent =
+                        "(Bei Kindern erfolgt die Einwilligung in der Regel durch eine/n Erziehungsberechtigte/n.)";
+                    btn.textContent = "Weiter";
+                } else {
+                    document.getElementById("countryLabel").textContent = "Country";
+                    document.getElementById("roleLabel").textContent = "Participant type";
+                    document.getElementById("roleNote").textContent =
+                        "(For children, consent typically comes from a parent/guardian.)";
+                    btn.textContent = "Continue";
+                }
+            }
+
+            // save + go
+            btn.addEventListener("click", () => {
+                localStorage.setItem("ct_language", chosen.lang);
+                localStorage.setItem("ct_country", chosen.country);
+                localStorage.setItem("ct_role", chosen.role);
+                location.href = "id_check.html";
+            });
+        </script>
+    </body>
+</html>

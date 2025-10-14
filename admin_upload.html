@@ -1,0 +1,262 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>City Tour – Admin Upload</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <link rel="stylesheet" href="styles.css" />
+
+    <style>
+      .admin-wrap {
+        max-width: 760px;
+        margin: 0 auto;
+      }
+      .card {
+        border: 1px solid #eee;
+        border-radius: 14px;
+        padding: 20px;
+        background: #fff;
+        box-shadow: 0 4px 14px rgba(0, 0, 0, 0.05);
+      }
+      .stack {
+        display: flex;
+        flex-direction: column;
+        gap: 14px;
+      }
+      .row {
+        display: flex;
+        gap: 12px;
+        align-items: center;
+      }
+      .muted {
+        color: #6b7280;
+        font-size: 0.95rem;
+      }
+      .kpi {
+        display: flex;
+        gap: 12px;
+      }
+      .kpi .pill {
+        background: #f6f7f8;
+        border-radius: 9999px;
+        padding: 6px 12px;
+        font-size: 0.9rem;
+      }
+      .input,
+      textarea.input {
+        background: #fff;
+        border: 1px solid #e5e7eb;
+        border-radius: 10px;
+        padding: 10px 12px;
+        font-size: 1rem;
+      }
+      textarea.input {
+        min-height: 180px;
+        resize: vertical;
+        line-height: 1.4;
+      }
+      .btn.primary {
+        background: #006c66;
+        color: #fff; /* make text white */
+        font-weight: 600;
+      }
+      .btn.primary:hover {
+        background: #005954; /* darker on hover for accessibility */
+      }
+      .btn {
+        border-radius: 12px;
+      }
+      .badge {
+        background: #eef6f5;
+        color: #006c66;
+        padding: 6px 10px;
+        border-radius: 9999px;
+        font-weight: 600;
+        font-size: 0.85rem;
+      }
+      .hint {
+        min-height: 20px;
+      }
+    </style>
+  </head>
+  <body>
+      <main class="container admin-wrap">
+        <header class="header" style="margin-bottom: 8px">
+          <div>
+            <div class="badge">CITY TOUR • ADMIN</div>
+            <div class="h1">Pre-ID Uploader</div>
+            <div class="sub muted">Paste IDs</div>
+          </div>
+        </header>
+
+        <section class="grid" style="grid-template-columns: 1fr">
+          <!-- Auth card -->
+          <div class="card stack" id="authCard">
+            <div class="row" style="justify-content: space-between">
+              <div class="badge">Log in with email and password</div>
+            </div>
+
+            <label class="label">Admin email</label>
+            <input id="email" class="input" type="email" placeholder="" autocomplete="off" />
+
+            <label class="label">Password</label>
+            <input id="password" class="input" type="password" placeholder="" />
+
+            <div class="row" style="justify-content: flex-end; gap: 10px">
+              <button id="loginBtn" class="btn primary" type = "button">Sign in</button>
+            </div>
+
+            <div id="authMsg" class="hint"></div>
+          </div>
+
+          <!-- Tool card -->
+          <div class="card stack" id="toolCard" style="display: none">
+            <div class="row" style="justify-content: space-between; align-items: center">
+              <div class="row" style="gap: 10px; align-items: center">
+                <div class="badge" id="who">Signed in</div>
+                <div class="kpi">
+                  <span class="pill" id="createdKpi">Created: 0</span>
+                  <span class="pill" id="skippedKpi">Skipped: 0</span>
+                  <span class="pill" id="errorsKpi">Errors: 0</span>
+                </div>
+              </div>
+              <button id="logoutBtn" class="btn">Sign out</button>
+            </div>
+
+            <div class="stack">
+              <label class="label">Paste IDs (one per line)</label>
+              <textarea
+                id="ids"
+                class="input"
+                placeholder="LM1
+LM2
+LM3"></textarea>
+            </div>
+
+            <div class="row">
+              <div style="flex: 1">
+                <label class="label">Notes (optional)</label>
+                <input id="notes" class="input" type="text" placeholder="e.g., Pilot batch, German adults" />
+              </div>
+              <div>
+                <button id="uploadBtn" class="btn primary">Upload</button>
+              </div>
+            </div>
+
+            <div id="result" class="hint"></div>
+            <div class="muted">Tip: duplicates are skipped automatically; existing IDs are not overwritten.</div>
+          </div>
+        </section>
+      </main>
+
+      <!-- keep your existing <script type="module"> with Firebase logic as-is -->
+      <script type="module">
+  // --- Firebase SDKs (CDN) ---
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+  import { getFirestore, doc, getDoc, setDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+  import { getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+  import { firebaseConfig } from "./js/firebase-config.js"; // adjust to "../js/..." if this file is inside /admin/
+
+  // --- CONFIG: put your admin email EXACTLY as in Firebase Auth + Rules ---
+  const ADMIN_EMAIL = "mpibraven@gmail.com";
+
+  // --- Init ---
+  const app  = initializeApp(firebaseConfig);
+  const db   = getFirestore(app);
+  const auth = getAuth(app);
+
+  // ✅ Clear any leftover anonymous session (from participant pages)
+  signOut(auth).catch(()=>{});
+
+  // --- DOM refs ---
+  const email     = document.getElementById('email');
+  const password  = document.getElementById('password');
+  const loginBtn  = document.getElementById('loginBtn');
+  const logoutBtn = document.getElementById('logoutBtn');
+  const authCard  = document.getElementById('authCard');
+  const toolCard  = document.getElementById('toolCard');
+  const who       = document.getElementById('who');
+
+  const idsBox    = document.getElementById('ids');
+  const notes     = document.getElementById('notes');
+  const uploadBtn = document.getElementById('uploadBtn');
+  const authMsg   = document.getElementById('authMsg');
+  const result    = document.getElementById('result');
+
+  const createdKpi = document.getElementById('createdKpi');
+  const skippedKpi = document.getElementById('skippedKpi');
+  const errorsKpi  = document.getElementById('errorsKpi');
+
+  function setAuthMsg(msg, ok=false){ authMsg.textContent = msg; authMsg.style.color = ok ? '#006c66' : '#b00020'; }
+  function setResult(msg, ok=false){ result.textContent = msg; result.style.color = ok ? '#006c66' : '#b00020'; }
+  function updateKpis(c,s,e){ if(createdKpi) createdKpi.textContent=`Created: ${c}`; if(skippedKpi) skippedKpi.textContent=`Skipped: ${s}`; if(errorsKpi) errorsKpi.textContent=`Errors: ${e}`; }
+
+  // --- Auth state gate ---
+  onAuthStateChanged(auth, (user) => {
+    if (user && user.email === ADMIN_EMAIL) {
+      who.textContent = `Signed in as ${user.email}`;
+      authCard.style.display = 'none';
+      toolCard.style.display = 'flex';
+      setAuthMsg('');
+    } else {
+      authCard.style.display = 'flex';
+      toolCard.style.display = 'none';
+    }
+  });
+
+  // --- Sign in ---
+  loginBtn.addEventListener('click', async () => {
+    try {
+      await signInWithEmailAndPassword(auth, email.value.trim(), password.value);
+      setAuthMsg('Signed in.', true);
+    } catch (e) {
+      console.error(e);
+      setAuthMsg(e.code || 'Sign-in failed. Check email/password.');
+    }
+  });
+
+  // --- Sign out ---
+  logoutBtn.addEventListener('click', async () => {
+    await signOut(auth);
+  });
+
+  // --- Upload IDs (paste-based) ---
+  uploadBtn.addEventListener('click', async () => {
+    const user = auth.currentUser;
+    if (!user || user.email !== ADMIN_EMAIL) { setResult('Not authorized.'); return; }
+
+    const raw = idsBox.value.split('\n').map(s => s.trim()).filter(Boolean);
+    if (raw.length === 0) { setResult('No IDs to upload.'); return; }
+
+    uploadBtn.disabled = true;
+    setResult('Uploading…');
+
+    let created = 0, skipped = 0, errors = 0;
+    const noteVal = notes.value.trim();
+
+    for (const id of raw) {
+      try {
+        const ref = doc(db, 'pre_ids', id); // document ID = pasted string
+        const ex  = await getDoc(ref);
+        if (ex.exists()) { skipped++; continue; }
+        await setDoc(ref, {
+          pre_id: id,
+          status: 'available',
+          notes: noteVal || '',
+          created_at: new Date().toISOString()
+        });
+        created++;
+      } catch (e) {
+        console.error('Error creating', id, e);
+        errors++;
+      }
+    }
+
+    uploadBtn.disabled = false;
+    updateKpis(created, skipped, errors);
+    setResult(`Done. Created: ${created}, Skipped (already existed): ${skipped}, Errors: ${errors}`, errors===0);
+  });
+</script>
+
+  </body>
+</html>

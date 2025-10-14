@@ -1,0 +1,222 @@
+<!doctype html>
+<html lang="en">
+    <head>
+        <meta charset="utf-8" />
+        <title>City Tour – Consent</title>
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+        <link rel="stylesheet" href="styles.css" />
+    </head>
+
+    <body>
+        <main class="container">
+            <header class="header">
+                <div>
+                    <div class="badge" id="badge">CITY TOUR • CONSENT</div>
+                    <div class="h1" id="title">Consent</div>
+                    <div class="sub" id="subtitle"></div>
+                </div>
+            </header>
+
+            <section class="grid">
+                <!-- Consent content dynamically loaded here -->
+                <div class="card" id="consentCard">
+                    <div id="consentText" style="max-height: 40vh; overflow-y: auto; padding-right: 6px">
+                        <p style="opacity: 0.7">Loading consent form…</p>
+                    </div>
+                </div>
+
+                <div id="scrollHint" class="sub" style="text-align: center; color: #666">
+                    ▼ Continue to scroll to read the full consent
+                </div>
+
+                <!-- checkbox -->
+                <div class="card" id="agreeArea">
+                    <label class="checkbox" style="margin-top: 1px">
+                        <input type="checkbox" id="agree" />
+                        <span id="agreeLabel">
+                            <strong>I agree</strong><br />
+                            I have read and understood the information above and consent to participate (or consent on
+                            behalf of my child).
+                        </span>
+                    </label>
+                    <div id="consentError" class="hint" style="margin-top: 8px"></div>
+                </div>
+
+                <!-- Progress bar -->
+                <div class="progress"><span style="width: 20%"></span></div>
+
+                <!-- Buttons -->
+                <div class="buttons" style="justify-content: space-between">
+                    <button class="btn" onclick="history.back()">Back</button>
+                    <button id="continue" class="btn primary" disabled>Continue</button>
+                </div>
+
+                <div class="footerNote" id="exitNote">If you do not agree, you can close this window to exit.</div>
+            </section>
+        </main>
+
+        <script>
+            // --- 1️⃣ Retrieve prior selections ---
+            const lang = localStorage.getItem("ct_language") || "EN"; // EN / GER
+            const country = localStorage.getItem("ct_country") || "US"; // US / DE
+            const role = localStorage.getItem("ct_role") || "adult"; // adult / child
+
+            // --- 2️⃣ Set text based on language ---
+            const UI = {
+                EN: {
+                    badge: "CITY TOUR • CONSENT",
+                    title: "Consent",
+                    subtitle: "Please read the information below carefully.",
+                    agree: "<strong>I agree</strong><br/>I have read and understood the information above and consent to participate (or consent on behalf of my child).",
+                    continue: "Continue",
+                    exit: "If you do not agree, you can close this window to exit."
+                },
+                GER: {
+                    badge: "CITY TOUR • EINVERSTÄNDNIS",
+                    title: "Einverständniserklärung",
+                    subtitle: "Bitte lesen Sie die folgenden Informationen sorgfältig.",
+                    agree: "<strong>Ich stimme zu</strong><br/>Ich habe die obigen Informationen gelesen und verstanden und stimme der Teilnahme zu (bzw. erteile die Einwilligung für mein Kind).",
+                    continue: "Weiter",
+                    exit: "Wenn Sie nicht einverstanden sind, können Sie dieses Fenster schließen."
+                }
+            };
+
+            const t = UI[lang] || UI.EN;
+            document.getElementById("badge").textContent = t.badge;
+            document.getElementById("title").textContent = t.title;
+            document.getElementById("subtitle").textContent = t.subtitle;
+            document.getElementById("agreeLabel").innerHTML = t.agree;
+            document.getElementById("continue").textContent = t.continue;
+            document.getElementById("exitNote").textContent = t.exit;
+
+            // --- 3️⃣ Compute consent file path ---
+            const key = `${country}_${role}_${lang}`; // e.g. "US_child_EN"
+            const filePath = `consents/consent_${key}.html`;
+
+            // --- 4️⃣ Load correct consent HTML dynamically ---
+            fetch(filePath)
+                .then((r) => {
+                    if (!r.ok) throw new Error(filePath + " not found");
+                    return r.text();
+                })
+                .then((html) => {
+                    document.getElementById("consentText").innerHTML = html;
+                })
+                .catch((err) => {
+                    document.getElementById("consentText").innerHTML =
+                        `<p style="color:#b00020">⚠️ Consent form for <code>${key}</code> not found. Please contact the researcher.</p>`;
+                    console.error(err);
+                });
+
+            // elements
+            const agreeArea = document.getElementById("agreeArea");
+            const consentBox = document.getElementById("consentText");
+            const agree = document.getElementById("agree");
+            const continueBtn = document.getElementById("continue");
+            const scrollHint = document.getElementById("scrollHint");
+            const consentError = document.getElementById("consentError");
+
+            function showError(msg) {
+                if (!consentError) return;
+                consentError.textContent = msg;
+                consentError.style.color = "#b00020";
+            }
+            function clearError() {
+                if (consentError) {
+                    consentError.textContent = "";
+                }
+            }
+
+            // lock initially
+            agree.disabled = true;
+            continueBtn.disabled = true;
+
+            // unlock on scroll-to-bottom
+            consentBox.addEventListener("scroll", () => {
+                const atBottom = consentBox.scrollTop + consentBox.clientHeight >= consentBox.scrollHeight - 10;
+                if (atBottom) {
+                    agree.disabled = false;
+                    if (scrollHint) scrollHint.style.display = "none";
+                    clearError();
+                }
+            });
+
+            // 🔒 explain why when they try to click early (works even on disabled input)
+            agreeArea.addEventListener(
+                "pointerdown",
+                (e) => {
+                    if (agree.disabled) {
+                        e.preventDefault(); // stop the native toggle attempt
+                        showError("Please read the full consent before selecting “I agree”.");
+                        consentBox.focus({ preventScroll: false });
+                    }
+                },
+                true
+            ); // <-- capture phase so we run first
+
+            // enable Continue once checked
+            agree.addEventListener("change", () => {
+                clearError();
+                continueBtn.disabled = !agree.checked;
+            });
+
+            // guard Continue click
+            continueBtn.addEventListener("click", (e) => {
+                if (!agree.checked) {
+                    e.preventDefault();
+                    showError("Please select “I agree” to continue.");
+                }
+            });
+
+            // --- 6️⃣ Store consent + move to next page ---
+            continueBtn.addEventListener("click", () => {
+                if (!agree.checked) return;
+                localStorage.setItem("ct_consent", "yes");
+                location.href = "instructions.html"; // next page
+            });
+        </script>
+
+        <script src="/js/firebase-config.js"></script>
+        <script type="module">
+            import { initApp, beginSession } from "/js/flow.js";
+            import {
+                getFirestore,
+                doc,
+                updateDoc,
+                serverTimestamp
+            } from "https://www.gstatic.com/firebasejs/10.13.1/firebase-firestore.js";
+
+            const { db } = initApp();
+            const pid = localStorage.getItem("ct.participantId");
+
+            // Call this from your existing “I agree” click handler
+            async function onConsentAccepted({ age = null, gender = null, lang = null } = {}) {
+                if (!pid) {
+                    // safety: if someone hit this page directly, bounce back to ID check
+                    window.location.replace("/id_check.html");
+                    return;
+                }
+
+                // 1) stamp consent + demographics (Session 1 only)
+                const pRef = doc(getFirestore(), "participants", pid);
+                const patch = {
+                    consentAt: serverTimestamp(),
+                    // store demographics only for S1
+                    ...(age !== null || gender !== null ? { demographics: { age, gender } } : {}),
+                    // store chosen language for session 1 (optional)
+                    ...(lang ? { "sessions.1.lang": lang, lang } : {})
+                };
+                await updateDoc(pRef, patch);
+
+                // 2) begin Session 1 (this also precomputes S2’s 48–72h window)
+                await beginSession({ db, participantId: pid, sessionNumber: 1 });
+
+                // 3) go to your next page (you already have instructions.html)
+                window.location.href = "/instructions.html";
+            }
+
+            // Expose for your existing button handler
+            window.onConsentAccepted = onConsentAccepted;
+        </script>
+    </body>
+</html>

@@ -1,0 +1,85 @@
+<!doctype html>
+<html>
+    <body>
+        <h3>City1 → locations → show 3 choices</h3>
+
+        <form id="frm" style="margin-bottom: 12px">
+            <label>event_id_number (for info only): <input id="eid" value="5" /></label>
+            <label style="margin-left: 8px">choices (comma): <input id="choices" value="10,9,5" /></label>
+            <button type="submit">Load</button>
+        </form>
+
+        <div id="wrap" style="display: flex; gap: 16px; align-items: flex-start">
+            <figure>
+                <img id="imgL" width="240" />
+                <figcaption>Left</figcaption>
+            </figure>
+            <figure>
+                <img id="imgM" width="240" />
+                <figcaption>Middle</figcaption>
+            </figure>
+            <figure>
+                <img id="imgR" width="240" />
+                <figcaption>Right</figcaption>
+            </figure>
+        </div>
+
+        <pre id="log" style="margin-top: 12px"></pre>
+
+        <script type="module">
+            import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+            import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+            import {
+                getStorage,
+                ref,
+                getDownloadURL
+            } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-storage.js";
+            import { firebaseConfig } from "./js/firebase-config.js";
+
+            const app = initializeApp(firebaseConfig);
+            const auth = getAuth(app);
+            const storage = getStorage(app);
+            const log = (m) => (document.getElementById("log").textContent += m + "\n");
+
+            await signInAnonymously(auth);
+            log("✅ Signed in anonymously.");
+
+            const $ = (sel) => document.querySelector(sel);
+            const form = $("#frm");
+
+            async function loadChoice(imgEl, eventIdChoice) {
+                // Your naming: media/City1/locations/{eventIdChoice}_1.png
+                const path = `media/City1/locations/${eventIdChoice}_1.png`;
+                const url = await getDownloadURL(ref(storage, path));
+                imgEl.src = url;
+                return url;
+            }
+
+            form.addEventListener("submit", async (e) => {
+                e.preventDefault();
+                $("#log").textContent = "";
+                const choices = $("#choices")
+                    .value.split(",")
+                    .map((s) => parseInt(s.trim(), 10));
+                if (choices.length !== 3 || choices.some((n) => Number.isNaN(n))) {
+                    log("❌ Enter exactly three numbers like 2,1,3");
+                    return;
+                }
+                try {
+                    log("Loading images...");
+                    const urls = await Promise.all([
+                        loadChoice($("#imgL"), choices[0]),
+                        loadChoice($("#imgM"), choices[1]),
+                        loadChoice($("#imgR"), choices[2])
+                    ]);
+                    log("✅ Loaded:\n" + urls.join("\n"));
+                } catch (err) {
+                    log("❌ " + (err.message || err));
+                }
+            });
+
+            // auto-run with defaults
+            form.dispatchEvent(new Event("submit"));
+        </script>
+    </body>
+</html>

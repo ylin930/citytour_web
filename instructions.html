@@ -1,0 +1,165 @@
+<!doctype html>
+<html lang="en">
+    <head>
+        <meta charset="utf-8" />
+        <title>City Tour – Instructions</title>
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+        <link rel="stylesheet" href="styles.css" />
+    </head>
+
+    <body>
+        <main class="container">
+            <header class="header">
+                <div>
+                    <div class="badge" id="badge">CITY TOUR • INSTRUCTIONS</div>
+                    <div class="h1" id="title">Instructions</div>
+                    <div class="sub" id="subtitle"></div>
+                </div>
+            </header>
+
+            <section class="grid">
+                <!-- Dynamically loaded instruction content -->
+                <div class="card">
+                    <div id="instructionText" style="max-height: 40vh; overflow-y: auto; padding-right: 6px">
+                        <p style="opacity: 0.7">Loading instructions…</p>
+                    </div>
+                </div>
+                <div id="scrollHint" class="sub" style="text-align: center; color: #666">
+                    ▼ Continue to scroll to read the full instruction
+                </div>
+                <!-- Simple acknowledgment -->
+                <div class="card">
+                    <label class="checkbox" style="margin-top: 1px">
+                        <input type="checkbox" id="ack" />
+                        <span id="ackLabel">I have read and understand the instructions.</span>
+                    </label>
+
+                    <div id="instrError" class="hint" style="margin-top: 8px"></div>
+                </div>
+
+                <div class="progress"><span style="width: 30%"></span></div>
+
+                <div class="buttons" style="justify-content: space-between">
+                    <button class="btn" onclick="goBack()">Back</button>
+                    <button id="continue" class="btn primary" disabled>Continue</button>
+                </div>
+            </section>
+        </main>
+
+        <script>
+            // Safe Back
+            function goBack() {
+                if (document.referrer && document.referrer !== window.location.href) history.back();
+                else location.href = "consent.html";
+            }
+
+            // Read choices
+            const lang = localStorage.getItem("ct_language") || "EN";
+            const country = localStorage.getItem("ct_country") || "US";
+            const role = localStorage.getItem("ct_role") || "adult";
+
+            // UI strings
+            const UI = {
+                EN: {
+                    badge: "CITY TOUR • INSTRUCTIONS",
+                    title: "Instructions",
+                    subtitle: "Please read the instructions carefully before starting.",
+                    ack: "I have read and understand the instructions.",
+                    continue: "Continue"
+                },
+                GER: {
+                    badge: "CITY TOUR • ANLEITUNG",
+                    title: "Anleitung",
+                    subtitle: "Bitte lesen Sie die folgenden Anweisungen sorgfältig, bevor Sie beginnen.",
+                    ack: "Ich habe die Anleitung gelesen und verstanden.",
+                    continue: "Weiter"
+                }
+            };
+            const t = UI[lang] || UI.EN;
+            const el = (id) => document.getElementById(id);
+            el("badge").textContent = t.badge;
+            el("title").textContent = t.title;
+            el("subtitle").textContent = t.subtitle;
+            el("ackLabel").textContent = t.ack;
+            el("continue").textContent = t.continue;
+
+            // Load instruction HTML
+            const key = `${country}_${role}_${lang}`; // e.g., US_child_EN
+            const filePath = `instructions/instructions_${key}.html`;
+            fetch(filePath)
+                .then((r) => {
+                    if (!r.ok) throw new Error(filePath + " not found");
+                    return r.text();
+                })
+                .then((html) => {
+                    el("instructionText").innerHTML = html;
+                })
+                .catch((err) => {
+                    el("instructionText").innerHTML =
+                        `<p style="color:#b00020">⚠️ Instructions not found for <code>${key}</code>.</p>`;
+                    console.error(err);
+                });
+
+            // ---- Scroll-to-end gate + error messaging ----
+            const instrBox = document.getElementById("instructionText"); // ✅ matches HTML
+            const ack = document.getElementById("ack"); // ✅ matches HTML
+            const continueBtn = document.getElementById("continue");
+            const scrollHint = document.getElementById("scrollHint");
+            const instrError = document.getElementById("instrError");
+
+            function showInstrError(msg) {
+                if (!instrError) return;
+                instrError.textContent = msg;
+                instrError.style.color = "#b00020";
+            }
+            function clearInstrError() {
+                if (instrError) instrError.textContent = "";
+            }
+
+            // lock initially
+            ack.disabled = true;
+            continueBtn.disabled = true;
+
+            // unlock after scrolling to bottom
+            instrBox.addEventListener("scroll", () => {
+                const atBottom = instrBox.scrollTop + instrBox.clientHeight >= instrBox.scrollHeight - 10;
+                if (atBottom) {
+                    ack.disabled = false;
+                    if (scrollHint) scrollHint.style.display = "none";
+                    clearInstrError();
+                }
+            });
+
+            // Explain if they try to click early (capture on the whole card area)
+            const ackArea = document.querySelector(".card label.checkbox").parentElement; // the card that contains the checkbox
+            ackArea.addEventListener(
+                "pointerdown",
+                (e) => {
+                    if (ack.disabled) {
+                        e.preventDefault();
+                        showInstrError("Please scroll to the end before checking “I have read the instructions”.");
+                        instrBox.focus({ preventScroll: false });
+                    }
+                },
+                true
+            );
+
+            // When acknowledged, enable Continue
+            ack.addEventListener("change", () => {
+                clearInstrError();
+                continueBtn.disabled = !ack.checked;
+            });
+
+            // Guard Continue click
+            continueBtn.addEventListener("click", (e) => {
+                if (!ack.checked) {
+                    e.preventDefault();
+                    showInstrError("Please check “I have read the instructions” to continue.");
+                    return;
+                }
+                localStorage.setItem("ct_instructionsAck", "yes");
+                location.href = "id_check.html";
+            });
+        </script>
+    </body>
+</html>

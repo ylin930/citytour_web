@@ -1,0 +1,199 @@
+:root {
+  --bg: #ffffff;             /* overall background */
+  --panel: #ffffff;          /* card + main panel background */
+  --card: #f9fafb;           /* slight grey card tone */
+  --accent: #006c66;         /* your teal accent */
+  --accent2: #2ab3a3;        /* lighter teal for gradient partner */
+  --text: #1e1e1e;           /* main text color */
+}
+
+/* ---- Base ---- */
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { height: 100%; }
+body {
+  font-family: Inter, system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  display: flex; align-items: center; justify-content: center;
+  padding: 32px;
+}
+
+/* ---- Background image ---- */
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  background: url("assets/bg.png") center / cover no-repeat;
+  opacity: 0.50;
+  z-index: -1;
+  filter: blur(2px) brightness(1.1);
+  
+}
+
+
+
+/* ---- Container ---- */
+.container {
+  width: min(920px, 94vw);
+  background: var(--panel);
+  border: 1px solid rgba(0,0,0,.08);
+  border-radius: 20px;
+  padding: 32px;
+  box-shadow: 0 12px 40px rgba(0,0,0,0.06);
+}
+
+/* ---- Header ---- */
+.header { display: flex; align-items: center; gap: 14px; margin-bottom: 18px; }
+.badge { font-size: 12px; text-transform: uppercase; color: #777; letter-spacing: .08em; }
+.h1 { font-size: 28px; font-weight: 800; margin: 4px 0 2px; color: var(--text); }
+.sub { opacity: .8; font-size: 15px; }
+
+/* ---- Consent text styling ---- */
+#consentText {
+  line-height: 1.6;
+  font-size: 1rem;
+  color: #333;
+  white-space: normal;
+}
+
+#consentText p {
+  margin-bottom: 1em;
+}
+
+#consentText ul, 
+#consentText ol {
+  margin-left: 1.5em;
+  margin-bottom: 1em;
+  list-style-position: outside;
+}
+
+#consentText li {
+  margin-bottom: 0.4em;
+}
+
+/*
+#consentText {
+  position: relative;
+  max-height: 40vh;
+  overflow-y: auto;
+  padding-right: 6px;
+}
+*/
+
+#consentText {
+  position: relative;
+  max-height: 40vh;
+  overflow-y: auto;
+  padding-right: 6px;
+  background: #fff;
+  -webkit-mask-image: linear-gradient(to bottom, black 85%, transparent 100%);
+          mask-image: linear-gradient(to bottom, black 85%, transparent 100%);
+}
+#consentText.scrolled { 
+  -webkit-mask-image: none; 
+          mask-image: none; 
+}
+
+
+/* ---- insructions text styling ---- */
+#instructionText {
+  line-height: 1.6;
+  font-size: 1rem;
+  color: #333;
+  white-space: normal;
+}
+
+/*
+#instructionText {
+  position: relative;
+  max-height: 60vh;
+  overflow-y: auto;
+  padding-right: 6px;
+  background: #fff;
+  -webkit-mask-image: linear-gradient(to bottom, black 85%, transparent 100%);
+          mask-image: linear-gradient(to bottom, black 85%, transparent 100%);
+}
+*/
+
+#instructionText p {
+  margin-bottom: 1em;
+}
+
+#instructionText ul, 
+#instructionText ol {
+  margin-left: 1.5em;
+  margin-bottom: 1em;
+  list-style-position: outside;
+}
+
+#instructionText li {
+  margin-bottom: 0.4em;
+}
+
+/* ---- Checkbox alignment ---- */
+.checkbox {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  font-size: 1rem;
+  line-height: 1.4;
+  color: #333;
+}
+
+.checkbox input[type="checkbox"] {
+  margin-top: 4px; /* tweak this for vertical centering */
+  width: 18px;
+  height: 18px;
+  accent-color: #006c66; /* same as your primary button color */
+  cursor: pointer;
+}
+
+.checkbox span {
+  display: inline-block;
+  max-width: 90%;
+}
+
+/* ---- Cards (boxes)---- */
+.card {
+  background: var(--card);
+  border: 1px solid rgba(0,0,0,.08);
+  border-radius: 14px;
+  padding: 20px;
+}
+
+/* ---- Buttons ---- */
+.buttons { display: flex; gap: 12px; flex-wrap: wrap; margin-top: 14px; }
+.btn {
+  padding: 14px 20px;
+  border-radius: 12px;
+  border: 1px solid rgba(0,0,0,.1);
+  background: #f3f3f3;
+  color: var(--text);
+  font-weight: 600;
+  cursor: pointer;
+  transition: all .2s ease;
+}
+.btn:hover { background: #e6f8f5; }
+.btn.primary {
+  background: linear-gradient(90deg, var(--accent), var(--accent2));
+  color: white;
+  border: none;
+}
+.btn.primary:hover { filter: brightness(1.05); }
+.btn:disabled { opacity: .55; cursor: not-allowed; }
+
+/* ---- Checkbox ---- */
+.checkbox { display: flex; gap: 10px; align-items: flex-start; margin-top: 10px; line-height: 1.45; }
+
+/* ---- Progress ---- */
+.progress {
+  height: 6px; border-radius: 999px; overflow: hidden; background: #eee;
+  margin: 20px 0 0;
+}
+.progress > span {
+  display: block; height: 100%; width: 20%;
+  background: linear-gradient(90deg, var(--accent), var(--accent2));
+}
+
+/* ---- Footer ---- */
+.footerNote { opacity: .75; font-size: 13px; margin-top: 10px; color: #555; }
