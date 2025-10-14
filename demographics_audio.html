@@ -1,0 +1,256 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>City Tour – Demographics & Audio Check</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+
+  <body>
+    <main class="container">
+      <header class="header">
+        <div>
+          <!-- Dynamic badge -->
+          <div class="badge" id="sessionBadge">CITY TOUR • Session 1</div>
+          <div class="sub">Please answer the questions below and confirm your audio is working.</div>
+        </div>
+      </header>
+
+      <section class="grid">
+        <form id="demoForm" class="card" style="display:flex; flex-direction:column; gap:16px">
+          <!-- Status messages -->
+          <!--<div id="guardMsg" class="hint" style="min-height:20px;"></div>-->
+
+          <!-- Demographics (wrap so we can hide on S2/S3) -->
+          <div id="demoBlock">
+            <label class="label" for="age">Age</label>
+            <input
+              id="age"
+              class="input"
+              type="number"
+              min="1"
+              max="110"
+              style="width:100px; height:25px; font-size:1.0em; text-align:center" />
+            <div id="ageError" class="hint" style="color:#b00020; min-height:18px;"></div>
+
+            <div style="margin-top:10px">
+              <div class="label" style="margin-bottom:6px">Gender:</div>
+              <div style="display:flex; gap:12px; flex-wrap:wrap">
+                <label class="checkbox"><input type="radio" name="gender" value="female" /> Female</label>
+                <label class="checkbox"><input type="radio" name="gender" value="male" /> Male</label>
+                <label class="checkbox"><input type="radio" name="gender" value="nonbinary" /> Non-binary</label>
+                <label class="checkbox"><input type="radio" name="gender" value="prefer_not" /> Prefer not to say</label>
+              </div>
+            </div>
+          </div>
+
+          <hr />
+
+          <!-- Audio check -->
+          <div>
+            <div class="label">Audio check</div>
+            <p class="sub" style="margin:6px 0 12px 0;">
+              Click “Play test sound”. If you hear the beep, select the checkbox.
+            </p>
+
+            <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap">
+              <button type="button" id="playBtn" class="btn">Play test sound</button>
+              <label class="checkbox" style="margin-left:8px">
+                <input type="checkbox" id="heard" /> I heard the sound
+              </label>
+            </div>
+          </div>
+
+          <div id="msg" class="hint" style="min-height:20px;"></div>
+
+          <div class="buttons" style="justify-content:flex-end; gap:10px">
+            <button type="button" class="btn" onclick="window.location.href='instructions.html'">Back</button>
+            <button id="continueBtn" type="submit" class="btn primary" disabled>Save & Begin Task</button>
+          </div>
+        </form>
+      </section>
+    </main>
+
+    <!-- Firebase config -->
+    <script src="/js/firebase-config.js"></script>
+
+    <!-- Page logic -->
+    <script type="module">
+      import { initApp } from "./js/flow.js";
+      import { doc, getDoc, updateDoc } from "https://www.gstatic.com/firebasejs/10.13.1/firebase-firestore.js";
+      import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.13.1/firebase-auth.js";
+
+      // ---------- Elements ----------
+      const form = document.getElementById("demoForm");
+      const ageEl = document.getElementById("age");
+      const ageErrorEl = document.getElementById("ageError");
+      const heardEl = document.getElementById("heard");
+      const contBtn = document.getElementById("continueBtn");
+      const msgEl = document.getElementById("msg");
+      const guardMsg = document.getElementById("guardMsg");
+      const groupNote = document.getElementById("groupNote");
+      const playBtn = document.getElementById("playBtn");
+      const sessionBadge = document.getElementById("sessionBadge");
+      const demoBlock = document.getElementById("demoBlock");
+
+      const setMsg = (t) => (msgEl.textContent = t || "");
+
+      // ---------- Participant guard ----------
+      const pid = localStorage.getItem("ct.participantId");
+      if (!pid) {
+        guardMsg.textContent = "Missing participant ID. Redirecting…";
+        setTimeout(() => (window.location.href = "id_check.html"), 800);
+      }
+
+      // ---------- Init Firebase & wait for anon auth ----------
+      const { db, auth } = initApp();
+      await new Promise((resolve) => {
+        if (auth.currentUser) return resolve();
+        const unsub = onAuthStateChanged(auth, () => { unsub(); resolve(); });
+        setTimeout(() => { try { unsub(); } catch {} resolve(); }, 1200);
+      });
+
+      // ---------- Load participant; set session + group ----------
+      let participantGroup = null;        // "adult" | "child"
+      let needsDemographics = true;       // S1 = true; S2/S3 = false
+
+      try {
+        const pSnap = await getDoc(doc(db, "participants", pid));
+        if (!pSnap.exists()) {
+          guardMsg.textContent = "Participant not found. Redirecting…";
+          setTimeout(() => (window.location.href = "id_check.html"), 800);
+        } else {
+          const data = pSnap.data();
+          participantGroup = data?.group || null;
+
+          const nextSession = data?.nextSession ?? 1;
+          sessionBadge.textContent = `CITY TOUR • Session ${nextSession}`;
+
+          needsDemographics = (nextSession === 1);
+          if (!needsDemographics && demoBlock) demoBlock.style.display = "none";
+
+          if (groupNote) {
+            if (participantGroup === "adult") {
+              groupNote.textContent = "You indicated you are an ADULT participant (age must be 18+).";
+            } else if (participantGroup === "child") {
+              groupNote.textContent = "You indicated you are a CHILD participant (age must be 4–17).";
+            } else {
+              groupNote.textContent = "Participant type missing. Please go back and re-enter your ID.";
+            }
+          }
+        }
+      } catch (e) {
+        console.error("Failed to read participant:", e);
+        guardMsg.textContent = `Could not load participant info (${e?.code || "unknown"}). Please reload or re-enter your ID.`;
+      }
+
+      // ---------- Web Audio beep (no files) ----------
+      let audioCtx = null;
+      async function playBeep() {
+        try {
+          if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+          if (audioCtx.state === "suspended") await audioCtx.resume();
+
+          const osc = audioCtx.createOscillator();
+          const gain = audioCtx.createGain();
+          osc.type = "sine";
+          osc.frequency.value = 880;
+
+          const now = audioCtx.currentTime;
+          gain.gain.setValueAtTime(0.0001, now);
+          gain.gain.exponentialRampToValueAtTime(0.2, now + 0.02);
+          gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.32);
+
+          osc.connect(gain);
+          gain.connect(audioCtx.destination);
+          osc.start(now);
+          osc.stop(now + 0.34);
+        } catch (err) {
+          console.error("Audio play failed:", err);
+          setMsg("Audio couldn't play. Check system volume / mute switch and try again.");
+        }
+      }
+      playBtn.addEventListener("click", () => { playBeep(); });
+
+      // ---------- Validation ----------
+      function validate() {
+        const audioOk = heardEl.checked;
+
+        // Sessions 2 & 3: only audio is required
+        if (!needsDemographics) {
+          contBtn.disabled = !audioOk;
+          return;
+        }
+
+        // Session 1 requires age + gender + audio + group-age consistency
+        const ageVal = Number(ageEl.value);
+        const hasAge = Number.isFinite(ageVal) && ageVal > 0 && ageVal < 120;
+        const gender = document.querySelector('input[name="gender"]:checked')?.value || null;
+
+        let ageOk = false;
+        let ageMsg = "";
+
+        if (!hasAge) {
+          ageMsg = "";
+        } else if (participantGroup === "adult") {
+          ageOk = ageVal >= 18;
+          if (!ageOk) ageMsg = "You selected you’re an ADULT participant — please check your age input (must be 18+).";
+        } else if (participantGroup === "child") {
+          ageOk = ageVal >= 4 && ageVal <= 17;
+          if (!ageOk) ageMsg = "You selected you’re a CHILD participant — please check your age input (must be 4–17).";
+        } else {
+          ageMsg = "Participant type missing. Please go back and re-enter your ID.";
+        }
+
+        ageErrorEl.textContent = ageMsg;
+        contBtn.disabled = !(hasAge && ageOk && gender && audioOk);
+      }
+
+      ageEl.addEventListener("input", validate);
+      heardEl.addEventListener("change", validate);
+      document.querySelectorAll('input[name="gender"]').forEach((r) => r.addEventListener("change", validate));
+
+      // ---------- Submit ----------
+      form.addEventListener("submit", async (e) => {
+        e.preventDefault();
+        setMsg("Saving…");
+        contBtn.disabled = true;
+
+        try {
+          if (needsDemographics) {
+            const age = Number(ageEl.value) || null;
+            const gender = document.querySelector('input[name="gender"]:checked')?.value || null;
+
+            // Final guards
+            if (participantGroup === "adult" && !(age >= 18)) {
+              setMsg("Please correct your age: adult participants must be 18 or older.");
+              validate(); return;
+            }
+            if (participantGroup === "child" && !(age >= 4 && age <= 17)) {
+              setMsg("Please correct your age: child participants must be 4–17.");
+              validate(); return;
+            }
+
+            // Save to participants (and mirror to id_mapping if it exists)
+            await updateDoc(doc(db, "participants", pid), { demographics: { age, gender } });
+            try {
+              const mSnap = await getDoc(doc(db, "id_mapping", pid));
+              if (mSnap.exists()) await updateDoc(doc(db, "id_mapping", pid), { age, gender });
+            } catch (_) {}
+          }
+
+          setMsg("Saved. Redirecting…");
+          window.location.href = "Stimulus-check.html";
+        } catch (err) {
+          console.error("Save failed:", err);
+          setMsg(`Error saving: ${err?.code || ""} ${err?.message || ""}`);
+          contBtn.disabled = false;
+        }
+      });
+
+      // Initial state
+      validate();
+    </script>
+  </body>
+</html>

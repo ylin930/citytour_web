@@ -13,7 +13,7 @@
                 <div>
                     <div class="badge">CITY TOUR • ID</div>
                     <div class="h1">Enter your unique study ID</div>
-                    <div class="sub">Paste ID from Email below:</div>
+                    <div class="sub">Paste the ID from your email below:</div>
                 </div>
             </header>
 
@@ -45,18 +45,15 @@
             </section>
         </main>
 
-        <!-- Make sure config loads first -->
-        <script type="module">
-            import { firebaseConfig } from "./js/firebase-config.js"; // if your file exports firebaseConfig
-            window.FB_CONFIG = window.FB_CONFIG || firebaseConfig; // expose it globally for flow.js
-        </script>
+        <!-- Load config -->
+        <script src="js/firebase-config.js"></script>
 
-        <!-- Page logic -->
+        <!-- Page logic, checks id to make sure it's on the ID list -->
         <script type="module">
             import { initApp, handleIdSubmit, showBlockedMessage } from "./js/flow.js";
 
             const { db } = initApp();
-            console.log("FB_CONFIG present?", !!window.FB_CONFIG);
+
             const form = document.getElementById("idForm");
             const input = document.getElementById("idInput");
             const continueBtn = document.getElementById("continue");
@@ -77,19 +74,26 @@
                 if (!id) return;
                 msg("Checking ID…");
                 continueBtn.disabled = true;
+
                 try {
                     const res = await handleIdSubmit({ db, inputId: id });
                     if (res?.blocked) {
                         showBlockedMessage(res.blocked);
-                        continueBtn.disabled = false;
+                        validate(); // re-enable if blocked
                     }
-                    // success auto-redirects inside handleIdSubmit()
-                } catch (e) {
-                    console.error(e);
+                    // success redirects inside handleIdSubmit()
+                } catch (err) {
+                    console.error("ID check failed:", err);
                     msg("Sorry — something went wrong. Please try again.");
-                    continueBtn.disabled = false;
+                    validate();
                 }
             });
+
+            // Back button behavior
+            window.goBack = function () {
+                if (document.referrer && document.referrer !== window.location.href) history.back();
+                else location.href = "index.html";
+            };
         </script>
     </body>
 </html>
