@@ -57,9 +57,12 @@
 
         <script>
             // --- 1️⃣ Retrieve prior selections ---
-            const lang = localStorage.getItem("ct_language") || "EN"; // EN / GER
-            const country = localStorage.getItem("ct_country") || "US"; // US / DE
-            const role = localStorage.getItem("ct_role") || "adult"; // adult / child
+            // --- 1️⃣ Retrieve prior selections (prefer new keys) ---
+            const lang = (localStorage.getItem("ct.lang") || localStorage.getItem("ct_language") || "EN").toUpperCase(); // "EN"/"GER"
+            const role = (localStorage.getItem("ct.group") || localStorage.getItem("ct_role") || "adult").toLowerCase(); // "adult"/"child"
+
+            // Country is derived from language ONLY (requirement: EN -> US, GER -> DE)
+            const country = lang === "GER" ? "DE" : "US";
 
             // --- 2️⃣ Set text based on language ---
             const UI = {
@@ -90,6 +93,7 @@
             document.getElementById("exitNote").textContent = t.exit;
 
             // --- 3️⃣ Compute consent file path ---
+            // Consent path depends ONLY on language + role (country inferred above)
             const key = `${country}_${role}_${lang}`; // e.g. "US_child_EN"
             const filePath = `consents/consent_${key}.html`;
 
@@ -168,11 +172,17 @@
                 }
             });
 
-            // --- 6️⃣ Store consent + move to next page ---
+            // --- 6️⃣ Store consent in Firestore + move to next page ---
             continueBtn.addEventListener("click", () => {
                 if (!agree.checked) return;
                 localStorage.setItem("ct_consent", "yes");
-                location.href = "instructions.html"; // next page
+                // Call the helper exposed by the module script below
+                if (window.onConsentAccepted) {
+                    window.onConsentAccepted({ lang }); // stamps consent + begins Session 1 + redirects
+                } else {
+                    // Safety fallback
+                    location.href = "instructions.html";
+                }
             });
         </script>
 
@@ -211,7 +221,7 @@
                 // 2) begin Session 1 (this also precomputes S2’s 48–72h window)
                 await beginSession({ db, participantId: pid, sessionNumber: 1 });
 
-                // 3) go to your next page (you already have instructions.html)
+                // 3) go to your next page
                 window.location.href = "/instructions.html";
             }
 

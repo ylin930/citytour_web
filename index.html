@@ -111,10 +111,21 @@
             }
 
             // save + go
+
             btn.addEventListener("click", () => {
                 localStorage.setItem("ct_language", chosen.lang);
                 localStorage.setItem("ct_country", chosen.country);
                 localStorage.setItem("ct_role", chosen.role);
+
+                // --- NEW standardized keys for consent + later pages ---
+                // Convert to canonical short codes used throughout the study
+                const langCode = chosen.lang.toUpperCase().startsWith("G") ? "GER" : "EN"; // catch 'German'/'English'
+                const groupCode = chosen.role.toLowerCase().includes("child") ? "child" : "adult";
+
+                localStorage.setItem("ct.lang", langCode); // "EN" or "GER"
+                localStorage.setItem("ct.group", groupCode); // "adult" or "child"
+
+                // proceed to ID entry
                 location.href = "id_check.html";
             });
         </script>

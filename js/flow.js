@@ -16,7 +16,7 @@ import {
   getDocs
 } from "https://www.gstatic.com/firebasejs/10.13.1/firebase-firestore.js";
 
-/* -------- Paths -------- */
+/* -------- PATHS -------- */
 const PATHS = {
   consent: "consent.html",
   instructions: "instructions.html",
@@ -24,14 +24,38 @@ const PATHS = {
   debrief: "debrief.html"
 };
 
-/* -------- Collections -------- */
+/* -------- COLLECTIONS -------- */
 const COLLECTIONS = {
   preIds: "pre_ids",
   participants: "participants",
   idMapping: "id_mapping"
 };
 
-/* -------- Init -------- */
+/* -------- CONSENT ROUTING -------- */
+// Folder where your consent files live:
+const CONSENT_DIR = "consents/";
+
+// Filenames (exact, with underscores — no spaces)
+const CONSENT_FILES = {
+  EN: {
+    adult: "consent_US_adult_EN.html",
+    child: "consent_US_child_EN.html"
+  },
+  GER: {
+    adult: "consent_DE_adult_GER.html",
+    child: "consent_DE_child_GER.html"
+  }
+};
+
+function getConsentPage() {
+  const lang = (localStorage.getItem("ct.lang") || "").toUpperCase(); // "EN" / "GER"
+  const group = (localStorage.getItem("ct.group") || "").toLowerCase(); // "adult" / "child"
+  const file = CONSENT_FILES[lang]?.[group] || "consent.html";
+  // Return full path in /consents/
+  return CONSENT_DIR + file;
+}
+
+/* -------- INIT FIREBASE -------- */
 export function initApp() {
   if (!window.FB_CONFIG)
     throw new Error("FB_CONFIG is missing. Make sure js/firebase-config.js sets window.FB_CONFIG.");
@@ -42,33 +66,35 @@ export function initApp() {
   return { app, db, auth };
 }
 
-/* -------- Utils -------- */
+/* -------- UTILS -------- */
 function addHours(ts, hrs) {
   const ms = ts.toMillis() + hrs * 3600 * 1000;
   return Timestamp.fromMillis(ms);
 }
+
 async function assignBalancedGroup({ presetGroup } = {}) {
-  return presetGroup || "child-EN";
+  // Prefer explicit preset → else from first page → else default
+  const fromUI = (localStorage.getItem("ct.group") || "").toLowerCase();
+  return presetGroup || (fromUI === "adult" ? "adult" : fromUI === "child" ? "child" : "child");
 }
+
 function randomId(len = 8) {
-  // Base36 uppercase, length ~8
   let s = "";
   while (s.length < len) s += Math.random().toString(36).slice(2);
   return s.slice(0, len).toUpperCase();
 }
 
-/* -------- Mapping helpers -------- */
+/* -------- ID-MAPPING HELPERS -------- */
 async function findMappingByPreId(db, preId) {
   const q = query(collection(db, COLLECTIONS.idMapping), where("pre_id", "==", preId));
   const snap = await getDocs(q);
   if (snap.empty) return null;
-  // document id IS new_id in your data; prefer that
   const docSnap = snap.docs[0];
   return { newId: docSnap.id, data: docSnap.data() };
 }
 
 async function createMappingTxn(tx, db, preId, presetGroup) {
-  // generate a new internal id (retry if collision)
+  // Generate unique internal ID (new_id)
   let newId;
   let tries = 0;
   while (tries < 5) {
@@ -76,7 +102,6 @@ async function createMappingTxn(tx, db, preId, presetGroup) {
     const mRef = doc(db, COLLECTIONS.idMapping, newId);
     const mSnap = await tx.get(mRef);
     if (!mSnap.exists()) {
-      // create mapping
       const group = await assignBalancedGroup({ presetGroup });
       tx.set(mRef, {
         pre_id: preId,
@@ -84,7 +109,6 @@ async function createMappingTxn(tx, db, preId, presetGroup) {
         group,
         assigned_at: serverTimestamp(),
         completed: false
-        // age/gender will be filled later from demographics
       });
       return { newId, group };
     }
@@ -93,12 +117,12 @@ async function createMappingTxn(tx, db, preId, presetGroup) {
   throw new Error("Could not generate unique new_id");
 }
 
-/* -------- Verify-only: claim/resume using pre_ids + id_mapping -------- */
+/* -------- VERIFY / CLAIM ID -------- */
 export async function handleIdSubmit({ db, inputId = "" }) {
   if (!inputId) return { blocked: { type: "invalid" } };
   const preId = inputId;
 
-  // 1) Look up the pre_id doc
+  // Step 1: Look up pre_ids
   const preRef = doc(db, COLLECTIONS.preIds, preId);
   const preSnap = await getDoc(preRef);
 
@@ -111,24 +135,17 @@ export async function handleIdSubmit({ db, inputId = "" }) {
       const status = raw === "unused" ? "available" : raw || "available";
       const presetGroup = pre.get("group") || null;
 
-      // Try to find existing mapping (outside txn we can't query,
-      // but we can read if we know the id—here we don't).
-      // We'll handle existing mapping AFTER txn for the "used" case.
-
       if (status === "available") {
-        // createMappingTxn probably does some writes (id_mapping / balance_rules)
-        // so DO NOT read after it inside the same transaction.
+        // Create mapping + participant under PRE ID (not newId)
         const { newId, group } = await createMappingTxn(tx, db, preId, presetGroup);
+        const pRef = doc(db, COLLECTIONS.participants, preId);
 
-        const pRef = doc(db, COLLECTIONS.participants, newId);
-
-        // ❌ DO NOT: const pSnap = await tx.get(pRef);  // read-after-write violates txn rules
-        // ✅ Just set/merge without reading first:
         tx.set(
           pRef,
           {
-            participantId: newId,
-            preId, // keep link to the pre code
+            participantId: preId,
+            newId,
+            preId,
             group,
             nextSession: 1,
             createdAt: serverTimestamp(),
@@ -162,33 +179,27 @@ export async function handleIdSubmit({ db, inputId = "" }) {
           { merge: true }
         );
 
-        // flip pre_id to used
-        tx.update(preRef, { status: "used", claimedAt: serverTimestamp(), claimedBy: newId });
-
-        return { pid: newId };
+        tx.update(preRef, { status: "used", claimedAt: serverTimestamp(), claimedBy: preId });
+        return { pid: preId };
       }
 
-      if (status === "used") {
-        // We'll resolve mapping after the txn; nothing to write in pre_ids
-        return { pid: null };
-      }
-
+      if (status === "used") return { pid: null };
       throw new Error("Invalid pre_id status");
     });
 
-    // If we already created/returned pid in txn, go on
+    // If created new participant → proceed
     if (pid) {
       localStorage.setItem("ct.participantId", pid);
       localStorage.setItem("ct.preId", preId);
       return routeFromParticipant({ db, participantId: pid });
     }
 
-    // pre_id was "used" — find mapping and ensure participant exists
+    // If already "used", look up mapping and ensure participant exists
     const found = await findMappingByPreId(db, preId);
     let mappedId = found?.newId || null;
 
     if (!mappedId) {
-      // Edge case: "used" but no mapping found (legacy). Create one now.
+      // Edge case: create one now
       const newId = randomId(8);
       await setDoc(
         doc(db, COLLECTIONS.idMapping, newId),
@@ -203,16 +214,17 @@ export async function handleIdSubmit({ db, inputId = "" }) {
       mappedId = newId;
     }
 
-    // Ensure participants/{mappedId} exists
-    const pRef = doc(db, COLLECTIONS.participants, mappedId);
+    // Ensure participants/{preId} exists
+    const pRef = doc(db, COLLECTIONS.participants, preId);
     const pSnap = await getDoc(pRef);
     if (!pSnap.exists()) {
       await setDoc(
         pRef,
         {
-          participantId: mappedId,
+          participantId: preId,
+          newId: mappedId,
           preId,
-          group: found?.data?.group || "child-EN",
+          group: found?.data?.group || "child",
           nextSession: 1,
           createdAt: serverTimestamp(),
           sessions: {
@@ -246,13 +258,12 @@ export async function handleIdSubmit({ db, inputId = "" }) {
       );
     }
 
-    localStorage.setItem("ct.participantId", mappedId);
+    localStorage.setItem("ct.participantId", preId);
     localStorage.setItem("ct.preId", preId);
-    return routeFromParticipant({ db, participantId: mappedId });
+    return routeFromParticipant({ db, participantId: preId });
   }
 
-  // 2) No pre_ids doc — maybe they pasted the internal ID (new_id)
-  //    Allow direct resume with participants/{new_id}
+  // Step 2: No pre_id found — try participants directly
   const pRef = doc(db, COLLECTIONS.participants, inputId);
   const pSnap = await getDoc(pRef);
   if (pSnap.exists()) {
@@ -260,11 +271,10 @@ export async function handleIdSubmit({ db, inputId = "" }) {
     return routeFromParticipant({ db, participantId: inputId });
   }
 
-  // 3) Not found
   return { blocked: { type: "invalid" } };
 }
 
-/* -------- routing & session helpers (unchanged) -------- */
+/* -------- ROUTING LOGIC -------- */
 async function routeFromParticipant({ db, participantId }) {
   const pRef = doc(db, COLLECTIONS.participants, participantId);
   const snap = await getDoc(pRef);
@@ -276,14 +286,15 @@ async function routeFromParticipant({ db, participantId }) {
 
   const sess = data.sessions?.[next];
   if (!sess) return { blocked: { type: "invalid" } };
-
   if (sess.startedAt && !sess.completedAt) return { blocked: { type: "invalid" } };
 
+  // --- Session 1: go to appropriate consent page ---
   if (next === 1) {
-    window.location.href = PATHS.consent;
+    window.location.href = "consent.html";
     return { ok: true };
   }
 
+  // --- Session 2/3: check time window ---
   const openAt = sess.windowOpenAt?.toDate?.() || null;
   const closeAt = sess.windowCloseAt?.toDate?.() || null;
   const now = new Date();
@@ -295,6 +306,7 @@ async function routeFromParticipant({ db, participantId }) {
   return { ok: true };
 }
 
+/* -------- STATUS MESSAGES -------- */
 export function showBlockedMessage(block) {
   const el = document.getElementById("msg");
   if (!el) return;
@@ -319,27 +331,73 @@ export function showBlockedMessage(block) {
   }
 }
 
-/* ----- beginSession / completeSession (same as before) ----- */
+/* -------- SESSION HELPERS -------- */
+// Do NOT advance nextSession here.
+// We stamp startedAt for the current session,
+// and (optionally) pre-compute S2/S3 windows,
+// but we keep nextSession = current until completion.
 export async function beginSession({ db, participantId, sessionNumber }) {
   const pRef = doc(db, COLLECTIONS.participants, participantId);
-  await updateDoc(pRef, { [`sessions.${sessionNumber}.startedAt`]: serverTimestamp(), nextSession: sessionNumber });
+
+  // 1) mark session started
+  await updateDoc(pRef, {
+    [`sessions.${sessionNumber}.startedAt`]: serverTimestamp(),
+    // keep nextSession at current (or leave unchanged)
+    nextSession: sessionNumber
+  });
+
+  // 2) read back server time so we can compute windows
   const snap = await getDoc(pRef);
   const startedAt = snap.data()?.sessions?.[sessionNumber]?.startedAt;
   if (!startedAt) throw new Error("Failed to stamp startedAt");
+
+  // 3) pre-compute the next session window, but DO NOT advance yet
   const next = sessionNumber + 1;
   if (next <= 3) {
-    await updateDoc(pRef, {
-      [`sessions.${next}.windowOpenAt`]: addHours(startedAt, 48),
-      [`sessions.${next}.windowCloseAt`]: addHours(startedAt, 72),
-      nextSession: next
-    });
-  } else {
-    await updateDoc(pRef, { nextSession: "done" });
+    const patch = {};
+    patch[`sessions.${next}.windowOpenAt`] = addHours(startedAt, 48);
+    patch[`sessions.${next}.windowCloseAt`] = addHours(startedAt, 72);
+    await updateDoc(pRef, patch);
   }
 }
+
+// Advance to the next session ONLY on completion.
 export async function completeSession({ db, participantId, sessionNumber }) {
   const pRef = doc(db, COLLECTIONS.participants, participantId);
-  const patch = { [`sessions.${sessionNumber}.completedAt`]: serverTimestamp() };
-  if (sessionNumber === 3) patch["nextSession"] = "done";
+  const patch = {
+    [`sessions.${sessionNumber}.completedAt`]: serverTimestamp()
+  };
+
+  if (sessionNumber < 3) {
+    patch["nextSession"] = sessionNumber + 1;
+  } else {
+    patch["nextSession"] = "done";
+  }
+
   await updateDoc(pRef, patch);
 }
+
+//export async function beginSession({ db, participantId, sessionNumber }) {
+//  const pRef = doc(db, COLLECTIONS.participants, participantId);
+//  await updateDoc(pRef, { [`sessions.${sessionNumber}.startedAt`]: serverTimestamp(), nextSession: sessionNumber });
+//  const snap = await getDoc(pRef);
+//  const startedAt = snap.data()?.sessions?.[sessionNumber]?.startedAt;
+//  if (!startedAt) throw new Error("Failed to stamp startedAt");
+//  const next = sessionNumber + 1;
+//  if (next <= 3) {
+//    await updateDoc(pRef, {
+//      [`sessions.${next}.windowOpenAt`]: addHours(startedAt, 48),
+//      [`sessions.${next}.windowCloseAt`]: addHours(startedAt, 72),
+//      nextSession: next,
+//    });
+//  } else {
+//    await updateDoc(pRef, { nextSession: "done" });
+//  }
+//}
+//
+//export async function completeSession({ db, participantId, sessionNumber }) {
+//  const pRef = doc(db, COLLECTIONS.participants, participantId);
+//  const patch = { [`sessions.${sessionNumber}.completedAt`]: serverTimestamp() };
+//  if (sessionNumber === 3) patch["nextSession"] = "done";
+//  await updateDoc(pRef, patch);
+//}

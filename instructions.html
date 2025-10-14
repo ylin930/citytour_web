@@ -53,10 +53,16 @@
                 else location.href = "consent.html";
             }
 
-            // Read choices
-            const lang = localStorage.getItem("ct_language") || "EN";
-            const country = localStorage.getItem("ct_country") || "US";
-            const role = localStorage.getItem("ct_role") || "adult";
+            //// Read choices
+            //const lang = localStorage.getItem("ct_language") || "EN";
+            //const country = localStorage.getItem("ct_country") || "US";
+            //const role = localStorage.getItem("ct_role") || "adult";
+            // Read choices  ✅ prefer new keys; fallback to old keys
+            const lang = (localStorage.getItem("ct.lang") || localStorage.getItem("ct_language") || "EN").toUpperCase(); // "EN"/"GER"
+            const role = (localStorage.getItem("ct.group") || localStorage.getItem("ct_role") || "adult").toLowerCase(); // "adult"/"child"
+
+            // Country is derived from language ONLY (requirement: EN→US, GER→DE)
+            const country = lang === "GER" ? "DE" : "US";
 
             // UI strings
             const UI = {
@@ -83,10 +89,11 @@
             el("ackLabel").textContent = t.ack;
             el("continue").textContent = t.continue;
 
-            // Load instruction HTML
-            const key = `${country}_${role}_${lang}`; // e.g., US_child_EN
+            // Load instruction HTML (depends ONLY on language + role; country is derived above)
+            const key = `${country}_${role}_${lang}`; // e.g., US_child_EN or DE_adult_GER
             const filePath = `instructions/instructions_${key}.html`;
-            fetch(filePath)
+
+            fetch(filePath, { cache: "no-store" })
                 .then((r) => {
                     if (!r.ok) throw new Error(filePath + " not found");
                     return r.text();
