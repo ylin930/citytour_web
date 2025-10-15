@@ -1,0 +1,292 @@
+<!doctype html>
+<html lang="en">
+    <head>
+        <meta charset="utf-8" />
+        <title>City Tour – Session Intro</title>
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+        <link rel="stylesheet" href="styles.css" />
+        <!-- Optional: prefetch likely video to warm cache -->
+        <!-- <link rel="prefetch" href="/media/cover/intro_S1_EN.mp4" as="video" type="video/mp4" /> -->
+
+        <style>
+            .video-wrap {
+                position: relative;
+                max-width: 820px;
+                margin: 0 auto;
+                border-radius: 16px;
+                overflow: hidden;
+                box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+                background: #000;
+            }
+            video {
+                display: block;
+                width: 100%;
+                height: auto;
+                background: #000;
+            }
+            .overlay,
+            .loading {
+                position: absolute;
+                inset: 0;
+                display: grid;
+                place-items: center;
+                background: rgba(0, 0, 0, 0.35);
+                color: #fff;
+                font-weight: 600;
+            }
+            .hidden {
+                display: none;
+            }
+            .pill {
+                background: #fff;
+                color: #111;
+                border-radius: 999px;
+                padding: 10px 14px;
+                box-shadow: 0 6px 16px rgba(0, 0, 0, 0.2);
+                cursor: pointer;
+                user-select: none;
+            }
+            #unmuteBtn {
+                position: absolute;
+                bottom: 10px;
+                right: 12px;
+                background: rgba(255, 255, 255, 0.9);
+                padding: 6px 10px;
+                border-radius: 8px;
+                font-size: 14px;
+                cursor: pointer;
+            }
+            #nextBtn[disabled] {
+                opacity: 0.5;
+                pointer-events: none;
+            }
+        </style>
+    </head>
+    <body>
+        <main class="container">
+            <header class="header">
+                <div>
+                    <div class="badge" id="badge">CITY TOUR • SESSION</div>
+                    <div class="h1" id="title">Welcome</div>
+                    <div class="sub" id="subtitle">Please watch the short video. “Next” unlocks when it ends.</div>
+                </div>
+            </header>
+
+            <section class="grid">
+                <div class="card" style="display: flex; flex-direction: column; gap: 14px; align-items: center">
+                    <div class="video-wrap">
+                        <video
+                            id="introVideo"
+                            autoplay
+                            playsinline
+                            preload="auto"
+                            poster="media/cover/CT_cover.png"
+                            controlslist="nodownload noplaybackrate nofullscreen"
+                            disablepictureinpicture>
+                            <source id="introSrc" type="video/mp4" />
+                        </video>
+
+                        <div id="loading" class="loading">Loading video…</div>
+                        <button id="unmuteBtn" class="hidden">🔇 Unmute</button>
+
+                        <div id="overlay" class="overlay hidden"><div class="pill">Play</div></div>
+                    </div>
+
+                    <div class="buttons" style="justify-content: flex-end; width: 100%">
+                        <button class="btn" type="button" onclick="history.back()">Back</button>
+                        <button id="nextBtn" class="btn primary" type="button" disabled>Next</button>
+                    </div>
+                </div>
+            </section>
+        </main>
+
+        <!-- Firebase config -->
+        <script src="js/firebase-config.js"></script>
+
+        <script type="module">
+            import { initializeApp } from "https://www.gstatic.com/firebasejs/10.13.1/firebase-app.js";
+            import {
+                getStorage,
+                ref,
+                getDownloadURL
+            } from "https://www.gstatic.com/firebasejs/10.13.1/firebase-storage.js";
+
+            // ---------- DOM refs
+            const video = document.getElementById("introVideo");
+            const srcEl = document.getElementById("introSrc");
+            const loading = document.getElementById("loading");
+            const overlay = document.getElementById("overlay");
+            const unmute = document.getElementById("unmuteBtn");
+            const nextBtn = document.getElementById("nextBtn");
+            const badgeEl = document.getElementById("badge");
+            const titleEl = document.getElementById("title");
+
+            // ---------- DEV FLAGS
+            const qs = new URLSearchParams(location.search);
+            const DEV_MODE = qs.get("dev") === "1";
+            const AUTO_NEXT = qs.get("autoNext") === "1";
+            const SKIP = qs.get("skip") === "1";
+
+            // DEV ribbon + hard-enable
+            if (DEV_MODE) {
+                // a small on-screen tag so you know dev is active
+                const tag = document.createElement("div");
+                tag.textContent = "DEV MODE";
+                tag.style.cssText =
+                    "position:fixed;top:8px;right:8px;z-index:9999;padding:6px 10px;background:#111;color:#fff;border-radius:8px;font:600 12px/1 system-ui";
+                document.body.appendChild(tag);
+
+                // force-enable Next no matter what
+                setTimeout(() => {
+                    nextBtn.disabled = false;
+                    nextBtn.textContent = "Next ▶️ (dev)";
+                }, 200);
+            }
+
+            function normalizeSession(v) {
+                if (!v) return 1;
+                const m = String(v).match(/(\d+)/);
+                return m ? parseInt(m[1], 10) : 1;
+            }
+
+            const session = normalizeSession(qs.get("session") ?? localStorage.getItem("ct_session") ?? "1");
+            const lang = (qs.get("lang") ?? localStorage.getItem("ct_language") ?? "EN").toUpperCase();
+
+            // ---------- Header text
+            if (session === 1) {
+                badgeEl.textContent = "CITY TOUR • SESSION 1";
+                titleEl.textContent = "Cover story";
+            } else {
+                badgeEl.textContent = `CITY TOUR • SESSION ${session}`;
+                titleEl.textContent = "Welcome back";
+            }
+
+            // ---------- Early DEV helpers (force enable Next immediately)
+            if (DEV_MODE) {
+                nextBtn.disabled = false;
+                nextBtn.textContent = "Next ▶️ (dev)";
+                if (SKIP) {
+                    if (session === 1) {
+                        window.location.href = "practice_intro.html?dev=1";
+                    } else {
+                        window.location.href = "Stimulus-check.html?dev=1";
+                    }
+                }
+            }
+
+            // ---------- Next click routing (bind early so it always works)
+            nextBtn.addEventListener("click", () => {
+                if (session === 1) {
+                    window.location.href = DEV_MODE ? "practice_intro.html?dev=1" : "practice_intro.html";
+                } else {
+                    window.location.href = DEV_MODE ? "Stimulus-check.html?dev=1" : "Stimulus-check.html";
+                }
+            });
+
+            // ---------- Map session → video paths
+            const VIDEO_MAP = {
+                1: {
+                    storage: `media/cover/CT_cover_${lang}.mp4`,
+                    hosting: `media/cover/CT_cover_${lang}.mp4`,
+                    poster: `media/cover/CT_cover.png`
+                },
+                2: {
+                    storage: `media/cover/continue_${lang}.mp4`,
+                    hosting: `media/cover/continue_${lang}.mp4`
+                },
+                3: {
+                    storage: `media/cover/continue_${lang}.mp4`,
+                    hosting: `media/cover/continue_${lang}.mp4`
+                }
+            };
+
+            // ---------- Safe async boot (no top-level await)
+            (async () => {
+                try {
+                    // Firebase is optional; if missing, we fall back to hosting
+                    let storage = null;
+                    try {
+                        const app = initializeApp(window.FB_CONFIG);
+                        storage = getStorage(app);
+                    } catch (e) {
+                        // FB_CONFIG not defined or Firebase blocked — that's fine
+                    }
+
+                    async function getMediaURL(storagePath, hostingPath, timeoutMs = 2500) {
+                        if (!storage) return hostingPath;
+                        try {
+                            const p = getDownloadURL(ref(storage, storagePath));
+                            const t = new Promise((_, rej) => setTimeout(() => rej(new Error("timeout")), timeoutMs));
+                            return await Promise.race([p, t]);
+                        } catch {
+                            return hostingPath;
+                        }
+                    }
+
+                    const choice = VIDEO_MAP[session] || VIDEO_MAP[1];
+                    if (choice.poster) video.setAttribute("poster", choice.poster);
+
+                    // Load source with robust fallback
+                    const url = await getMediaURL(choice.storage, choice.hosting);
+                    srcEl.src = url;
+                    video.load();
+
+                    // Loading & autoplay behavior
+                    video.addEventListener("canplay", () => loading.classList.add("hidden"));
+
+                    try {
+                        await video.play();
+                    } catch {
+                        overlay.classList.remove("hidden");
+                    }
+
+                    overlay.addEventListener("click", async () => {
+                        overlay.classList.add("hidden");
+                        try {
+                            await video.play();
+                        } catch {}
+                    });
+
+                    // Unmute toggle (only if button exists)
+                    if (unmute) {
+                        video.addEventListener("playing", () => unmute.classList.remove("hidden"));
+                        unmute.addEventListener("click", () => {
+                            video.muted = !video.muted;
+                            unmute.textContent = video.muted ? "🔇 Unmute" : "🔊 Mute";
+                        });
+                    }
+
+                    // Enable Next when the video ends (normal mode)
+                    video.addEventListener("ended", () => {
+                        nextBtn.disabled = false;
+                        nextBtn.classList.remove("opacity-50", "pointer-events-none");
+                    });
+
+                    // Normal-mode safety: enable if scrubbed to end
+                    if (!DEV_MODE) {
+                        video.addEventListener("timeupdate", () => {
+                            if (video.duration && video.currentTime >= video.duration - 0.25) {
+                                nextBtn.disabled = false;
+                            }
+                        });
+                    }
+
+                    // Dev auto-advance
+                    if (DEV_MODE && AUTO_NEXT) {
+                        setTimeout(() => nextBtn.click(), 800);
+                    }
+
+                    // Hard safety net: in case anything above fails, enable Next after 2s in dev
+                    if (DEV_MODE) {
+                        setTimeout(() => {
+                            nextBtn.disabled = false;
+                        }, 2000);
+                    }
+                } catch (err) {
+                    // Last-resort: don't strand the user — enable Next
+                    nextBtn.disabled = false;
+                }
+            })();
+        </script>
+    </body>
+</html>

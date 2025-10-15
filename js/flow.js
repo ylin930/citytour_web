@@ -282,6 +282,10 @@ async function routeFromParticipant({ db, participantId }) {
 
   const data = snap.data();
   const next = data.nextSession;
+
+  // ✅ Store current session number locally
+  localStorage.setItem("ct_session", String(next));
+
   if (next === "done") return { blocked: { type: "completedAll" } };
 
   const sess = data.sessions?.[next];
@@ -294,17 +298,21 @@ async function routeFromParticipant({ db, participantId }) {
     return { ok: true };
   }
 
-  // --- Session 2/3: check time window ---
+  // --- Session 2 and 3 ---
   const openAt = sess.windowOpenAt?.toDate?.() || null;
   const closeAt = sess.windowCloseAt?.toDate?.() || null;
   const now = new Date();
-  if (!openAt || !closeAt) return { blocked: { type: "invalid" } };
-  if (now < openAt) return { blocked: { type: "tooEarly", session: next, openAt, closeAt } };
-  if (now > closeAt) return { blocked: { type: "invalid" } };
 
-  window.location.href = PATHS.instructions;
+  if (!openAt || !closeAt) return { blocked: { type: "invalid" } };
+  if (now < openAt)
+    return { blocked: { type: "tooEarly", session: next, openAt, closeAt } };
+  if (now > closeAt)
+    return { blocked: { type: "invalid" } };
+
+  window.location.href = "instructions.html";
   return { ok: true };
 }
+
 
 /* -------- STATUS MESSAGES -------- */
 export function showBlockedMessage(block) {

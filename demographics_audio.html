@@ -1,6 +1,7 @@
 <!doctype html>
 <html lang="en">
   <head>
+    <meta name="ct-next" content="session_video.html">
     <meta charset="utf-8" />
     <title>City Tour – Demographics & Audio Check</title>
     <meta name="viewport" content="width=device-width, initial-scale=1" />
@@ -75,7 +76,7 @@
     </main>
 
     <!-- Firebase config -->
-    <script src="/js/firebase-config.js"></script>
+    <script src="js/firebase-config.js"></script>
 
     <!-- Page logic -->
     <script type="module">
@@ -260,7 +261,7 @@
           }
 
           setMsg("Saved. Redirecting…");
-          window.location.href = "cover_story.html";
+          window.location.href = "session_video.html";
         } catch (err) {
           console.error("Save failed:", err);
           setMsg(`Error saving: ${err?.code || ""} ${err?.message || ""}`);
@@ -271,5 +272,6 @@
       // Initial state
       validate();
     </script>
-  </body>
+    <script src="js/dev-tools.js"></script>
+</body>
 </html>
