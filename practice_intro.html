@@ -17,7 +17,7 @@
   <!-- Session-1 guard -->
   <script>
     const s = localStorage.getItem("ct_session");
-    if (s !== "1") location.replace("instructions.html");
+    //if (s !== "1") location.replace("instructions.html");
   </script>
 </head>
 <body>
@@ -34,9 +34,9 @@
       <div class="card" style="display:flex;flex-direction:column;gap:14px;align-items:center">
         <div class="video-wrap">
           <video id="vid" autoplay muted playsinline preload="auto"
-                 poster="/media/city0/city_intro.jpg"
+                 poster="media/city0/city_intro.jpg"
                  controlslist="nodownload noplaybackrate nofullscreen" disablepictureinpicture>
-            <source src="/media/city0/city_intro.mp4" type="video/mp4" />
+            <source src="media/city0/animations/en/city_intro.mp4" type="video/mp4" />
           </video>
           <div id="loading" class="loading">Loading…</div>
           <div id="unmuteBtn" class="hidden">🔊 Unmute</div>

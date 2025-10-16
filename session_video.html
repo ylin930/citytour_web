@@ -121,67 +121,6 @@
             const badgeEl = document.getElementById("badge");
             const titleEl = document.getElementById("title");
 
-            // ---------- DEV FLAGS
-            const qs = new URLSearchParams(location.search);
-            const DEV_MODE = qs.get("dev") === "1";
-            const AUTO_NEXT = qs.get("autoNext") === "1";
-            const SKIP = qs.get("skip") === "1";
-
-            // DEV ribbon + hard-enable
-            if (DEV_MODE) {
-                // a small on-screen tag so you know dev is active
-                const tag = document.createElement("div");
-                tag.textContent = "DEV MODE";
-                tag.style.cssText =
-                    "position:fixed;top:8px;right:8px;z-index:9999;padding:6px 10px;background:#111;color:#fff;border-radius:8px;font:600 12px/1 system-ui";
-                document.body.appendChild(tag);
-
-                // force-enable Next no matter what
-                setTimeout(() => {
-                    nextBtn.disabled = false;
-                    nextBtn.textContent = "Next ▶️ (dev)";
-                }, 200);
-            }
-
-            function normalizeSession(v) {
-                if (!v) return 1;
-                const m = String(v).match(/(\d+)/);
-                return m ? parseInt(m[1], 10) : 1;
-            }
-
-            const session = normalizeSession(qs.get("session") ?? localStorage.getItem("ct_session") ?? "1");
-            const lang = (qs.get("lang") ?? localStorage.getItem("ct_language") ?? "EN").toUpperCase();
-
-            // ---------- Header text
-            if (session === 1) {
-                badgeEl.textContent = "CITY TOUR • SESSION 1";
-                titleEl.textContent = "Cover story";
-            } else {
-                badgeEl.textContent = `CITY TOUR • SESSION ${session}`;
-                titleEl.textContent = "Welcome back";
-            }
-
-            // ---------- Early DEV helpers (force enable Next immediately)
-            if (DEV_MODE) {
-                nextBtn.disabled = false;
-                nextBtn.textContent = "Next ▶️ (dev)";
-                if (SKIP) {
-                    if (session === 1) {
-                        window.location.href = "practice_intro.html?dev=1";
-                    } else {
-                        window.location.href = "Stimulus-check.html?dev=1";
-                    }
-                }
-            }
-
-            // ---------- Next click routing (bind early so it always works)
-            nextBtn.addEventListener("click", () => {
-                if (session === 1) {
-                    window.location.href = DEV_MODE ? "practice_intro.html?dev=1" : "practice_intro.html";
-                } else {
-                    window.location.href = DEV_MODE ? "Stimulus-check.html?dev=1" : "Stimulus-check.html";
-                }
-            });
 
             // ---------- Map session → video paths
             const VIDEO_MAP = {
@@ -262,26 +201,6 @@
                         nextBtn.classList.remove("opacity-50", "pointer-events-none");
                     });
 
-                    // Normal-mode safety: enable if scrubbed to end
-                    if (!DEV_MODE) {
-                        video.addEventListener("timeupdate", () => {
-                            if (video.duration && video.currentTime >= video.duration - 0.25) {
-                                nextBtn.disabled = false;
-                            }
-                        });
-                    }
-
-                    // Dev auto-advance
-                    if (DEV_MODE && AUTO_NEXT) {
-                        setTimeout(() => nextBtn.click(), 800);
-                    }
-
-                    // Hard safety net: in case anything above fails, enable Next after 2s in dev
-                    if (DEV_MODE) {
-                        setTimeout(() => {
-                            nextBtn.disabled = false;
-                        }, 2000);
-                    }
                 } catch (err) {
                     // Last-resort: don't strand the user — enable Next
                     nextBtn.disabled = false;

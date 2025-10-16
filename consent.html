@@ -1,7 +1,7 @@
 <!doctype html>
 <html lang="en">
     <head>
-    <meta name="ct-next" content="instructions.html">
+        <meta name="ct-next" content="instructions.html" />
         <meta charset="utf-8" />
         <title>City Tour – Consent</title>
         <meta name="viewport" content="width=device-width, initial-scale=1" />
@@ -204,7 +204,7 @@
             async function onConsentAccepted({ age = null, gender = null, lang = null } = {}) {
                 if (!pid) {
                     // safety: if someone hit this page directly, bounce back to ID check
-                    window.location.replace("/id_check.html");
+                    window.location.replace("id_check.html");
                     return;
                 }
 
@@ -223,12 +223,12 @@
                 await beginSession({ db, participantId: pid, sessionNumber: 1 });
 
                 // 3) go to your next page
-                window.location.href = "/instructions.html";
+                window.location.href = "instructions.html";
             }
 
             // Expose for your existing button handler
             window.onConsentAccepted = onConsentAccepted;
         </script>
-      <script src="js/dev-tools.js"></script>
-</body>
+        <script src="js/dev-tools.js"></script>
+    </body>
 </html>
