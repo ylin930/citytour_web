@@ -6,6 +6,9 @@
     <title>PS</title>
     <link rel="stylesheet" href="styles.css" />
     <style>
+      [hidden] {
+        display: none !important;
+      }
       .choice-grid {
         display: grid;
         grid-template-columns: repeat(3, minmax(220px, 1fr));
@@ -32,21 +35,12 @@
         padding: 10px 8px;
         font-weight: 600;
       }
-      /*
-      .choice.disabled {
-        filter: grayscale(100%);
-        opacity: 0.55;
-        pointer-events: none;
-      }
-      .choice.ready {
-        filter: none;
-        opacity: 1;
-        pointer-events: auto;
-      }
-      */
       .choice.selected {
         border-color: #2563eb;
         box-shadow: 0 8px 20px rgba(37, 99, 235, 0.25);
+      }
+      /* placeholder skeleton while instruction plays */
+
       }
     </style>
   </head>
@@ -55,14 +49,13 @@
       <header class="header">
         <div>
           <div class="badge" id="badge">PS</div>
-          <div class="h1">Pick the matching picture</div>
+          <div class="h1">Which place did you visit on your tour?</div>
           <div class="sub">Listen to the instruction, then choose one.</div>
         </div>
       </header>
 
       <section class="grid">
         <div class="card" style="display: flex; flex-direction: column; gap: 14px">
-          <!--<div id="seqbar" class="seqbar"></div>-->
           <div id="trialCounter" class="muted">Trial 1</div>
           <div id="choices" class="choice-grid"></div>
           <div style="display: flex; justify-content: space-between; gap: 10px">
@@ -104,6 +97,7 @@
 
       // build the proper config filename
       const trialsURL = qs.get("trials") || `config/trials_${session}_${city}_${TASK}_v${v}.json`;
+      console.log("[trialsURL]", trialsURL);
 
       // where to go after finishing this block
       const nextURL = qs.get("next") || `session_video.html?session=${encodeURIComponent(session)}`;
@@ -112,6 +106,7 @@
       const instrFirst = (c) => `media/${c}/audio/${lang}/instructions/${TASK}_first.mp3`;
       const instrNext = (c) => `media/${c}/audio/${lang}/instructions/${TASK}_next.mp3`;
       const fbPath = (c, name) => `media/${c}/audio/${lang}/feedback/${name}`;
+      const guideSrc = `media/${city}/images/guide.png`;
       //const animPath = (n) => `media/${city}/animations/${lang}/${n}.mp4`;
 
       // ---------- PS-specific instruction audio ----------
@@ -138,22 +133,24 @@
       function buildChoice(position, imgUrl) {
         const card = document.createElement("div");
         card.className = "choice";
+
         const img = document.createElement("img");
         img.src = imgUrl;
+        img.alt = `Option ${position}`;
         img.onerror = () => {
           console.warn("Image failed to load:", imgUrl);
           img.style.objectFit = "contain";
           img.style.background = "#fee";
-          img.alt = `Missing: ${imgUrl}`;
         };
+
         const label = document.createElement("div");
         label.className = "label";
         label.textContent = `Option ${position}`;
+
         card.appendChild(img);
         card.appendChild(label);
 
         card.addEventListener("click", () => {
-          if (card.classList.contains("disabled")) return;
           document.querySelectorAll(".choice").forEach((el) => el.classList.remove("selected"));
           card.classList.add("selected");
           selected = position;
@@ -168,6 +165,16 @@
         a.preload = "auto";
         a.muted = false;
         a.volume = 1;
+
+        a.addEventListener(
+          "play",
+          () => {
+            const prompt = document.getElementById("instrPrompt");
+            if (prompt) prompt.remove();
+          },
+          { once: true }
+        );
+
         a.addEventListener(
           "play",
           () => {
@@ -211,46 +218,52 @@
 
       function renderTrial() {
         const T = TRIALS[idx];
-        //renderSeqBar();
         trialCounter.textContent = `Trial ${idx + 1} of ${TRIALS.length}`;
         feedback.textContent = "";
         submitBtn.disabled = true;
         nextBtn.disabled = true;
         selected = null;
+
         grid.innerHTML = "";
-
-        // T.assets has 3 image paths in the correct presentation order (correct image _1 is placed at T.correct)
         const [i1, i2, i3] = T.assets;
-        const c1 = buildChoice(1, i1),
-          c2 = buildChoice(2, i2),
-          c3 = buildChoice(3, i3);
-        grid.appendChild(c1);
-        grid.appendChild(c2);
-        grid.appendChild(c3);
-        // per-trial instruction audio (plays once before participant chooses)
-        playAudioOnce(perTrialAudio, () => {
-          // nothing else to do — choices are already clickable
-        });
+        grid.append(buildChoice(1, i1), buildChoice(2, i2), buildChoice(3, i3));
 
-        // per-trial instruction -> enable choices
-        //Array.from(grid.children).forEach((el) => el.classList.add("disabled"));
-        //playAudioOnce(perTrialAudio, () => {
-        //  Array.from(grid.children).forEach((el) => {
-        //    el.classList.remove("disabled");
-        //    el.classList.add("ready");
-        //  });
-        //});
+        // You can still play the per-trial instruction; it won’t affect visibility
+        playAudioOnce(perTrialAudio, () => {});
+      }
+
+      function playFeedbackAudio(task, city, lang, isCorrect, correctOption) {
+        // Only for practice
+        const isPractice = city === "City0" || String(session) === "0";
+        if (!isPractice) return;
+
+        // Build filename pattern:
+        // correct  -> "correct.mp3"
+        // incorrect-> "<task>_incorrect{correctOption}.mp3" e.g., ps_incorrect2.mp3
+        const prefix = task.toLowerCase(); // "ps" | "pc" | "gen"
+        const file = isCorrect ? "correct.mp3" : `${prefix}_incorrect${correctOption}.mp3`;
+        const url = `media/${city}/audio/${lang}/feedback/${file}`;
+
+        const a = new Audio(url);
+        a.preload = "auto";
+        a.muted = false;
+        a.volume = 1;
+        a.play().catch((err) => {
+          console.warn("Feedback audio failed (ok to ignore):", url, err?.message);
+        });
       }
 
       submitBtn.addEventListener("click", () => {
         if (selected == null) return;
         const T = TRIALS[idx];
         const isCorrect = selected === Number(T.correct);
+
         feedback.textContent = isCorrect ? "✅ Correct!" : `❌ Incorrect. It was Option ${T.correct}.`;
         submitBtn.disabled = true;
         nextBtn.disabled = false;
-        //const dots = seqbar.querySelectorAll(".seq-dot");
-        //if (dots[idx]) dots[idx].classList.add("done");
+
+        // Play feedback audio (practice only)
+        playFeedbackAudio(TASK, city, lang, isCorrect, T.correct);
       });
 
       nextBtn.addEventListener("click", () => {
@@ -268,8 +281,53 @@
         .then((data) => {
           TRIALS = Array.isArray(data) ? data : [];
           if (!TRIALS.length) throw new Error("No trials");
-          // intro once
+
+          // hide trial counter during intro
+          trialCounter.hidden = true;
+
+          // ---- render guide during intro ----
+          grid.innerHTML = "";
+          grid.style.display = "flex";
+          grid.style.flexDirection = "column";
+          grid.style.justifyContent = "center";
+          grid.style.alignItems = "center";
+          grid.style.minHeight = "70vh";
+          grid.style.background = "#fff"; // optional, keeps a clean area
+
+          const guideImg = document.createElement("img");
+          guideImg.src = guideSrc;
+          guideImg.alt = "Guide";
+          guideImg.style.width = "auto";
+          guideImg.style.maxWidth = "65vw";
+          guideImg.style.maxHeight = "70vh";
+          guideImg.style.objectFit = "contain";
+          guideImg.style.borderRadius = "18px";
+          guideImg.style.boxShadow = "0 8px 24px rgba(0,0,0,.15)";
+          guideImg.onerror = () => {
+            guideImg.remove();
+            const fallback = document.createElement("div");
+            fallback.textContent = "Guide image missing";
+            fallback.style.padding = "24px 32px";
+            fallback.style.background = "#fff3f3";
+            fallback.style.border = "1px solid #f5c2c7";
+            fallback.style.borderRadius = "12px";
+            grid.appendChild(fallback);
+          };
+
+          grid.appendChild(guideImg);
+
+          // ---- play the *intro* audio with guide visible ----
           playAudioOnce(introAudio, () => {
+            // reset grid back to normal after intro
+            grid.style.display = ""; // reset to default grid
+            grid.style.flexDirection = "";
+            grid.style.justifyContent = "";
+            grid.style.alignItems = "";
+            grid.style.minHeight = "";
+            grid.style.background = "";
+
+            guideImg.remove();
+            trialCounter.hidden = false;
             renderTrial();
           });
         })
