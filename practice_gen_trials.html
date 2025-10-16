@@ -6,10 +6,29 @@
   <title>City 0 – Generator Practice</title>
   <link rel="stylesheet" href="styles.css" />
   <style>
-    .choice-grid { display:grid; grid-template-columns: repeat(3, minmax(160px, 1fr)); gap:16px; align-items:center; }
-    .choice { border:2px solid transparent; border-radius:14px; padding:10px; cursor:pointer; background:#fff; box-shadow:0 6px 16px rgba(0,0,0,.08); }
-    .choice.selected { border-color:#2563eb; box-shadow:0 8px 20px rgba(37,99,235,.25); }
-    .anim { width:100%; aspect-ratio:4/3; background:#000; border-radius:10px; overflow:hidden; }
+    /* Progress bar */
+    .seqbar{display:flex;align-items:center;gap:10px;margin:6px 0 14px}
+    .seq-gen{width:42px;height:42px;border-radius:8px;overflow:hidden;flex:0 0 auto;box-shadow:0 4px 12px rgba(0,0,0,.12);background:#fff}
+    .seq-gen img{width:100%;height:100%;object-fit:cover;display:block}
+    .seq-arrow{opacity:.5;font-weight:700;user-select:none}
+    .seq-dot{width:42px;height:42px;border-radius:10px;border:2px dashed #bbb;background:#fff;display:grid;place-items:center;font-weight:700;color:#777;flex:0 0 auto;transition:.2s}
+    .seq-dot.active{border-style:solid;border-color:#2563eb;color:#2563eb}
+    .seq-dot.done{border-style:solid;border-color:#16a34a;background:#eafff2;color:#0f5132}
+
+    /* Choices */
+    .choice-grid{display:grid;grid-template-columns:repeat(3,minmax(240px,1fr));gap:16px;align-items:stretch}
+    .choice{display:flex;flex-direction:column;overflow:hidden;border-radius:14px;border:2px solid transparent;background:#fff;box-shadow:0 6px 16px rgba(0,0,0,.08);transition:.2s}
+    .media-wrap{position:relative;width:100%;height:260px;overflow:hidden;background:#000}
+    video.anim{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:center;display:block}
+    .label{text-align:center;padding:10px 8px;font-weight:600}
+
+    .choice.disabled{filter:grayscale(100%);opacity:.55;pointer-events:none}
+    .choice.playing{filter:none;opacity:1;pointer-events:none;border-color:#a3bffa}
+    .choice.ready{filter:none;opacity:1;pointer-events:auto}
+    .choice.selected{border-color:#2563eb;box-shadow:0 8px 20px rgba(37,99,235,.25)}
+
+    .muted{opacity:.7;font-size:14px}
+    .btn-row{display:flex;justify-content:space-between;gap:10px}
   </style>
 </head>
 <body>
@@ -18,19 +37,27 @@
       <div>
         <div class="badge">CITY 0 • PRACTICE</div>
         <div class="h1">Pick the matching animation</div>
-        <div class="sub">Tap one option, then press Submit.</div>
+        <div class="sub">Which place would you visit first?</div>
       </div>
     </header>
 
     <section class="grid">
-      <div class="card" style="display:flex;flex-direction:column;gap:16px;">
+      <div class="card" style="display:flex;flex-direction:column;gap:14px">
+        <!-- Progress -->
+        <div id="seqbar" class="seqbar">
+          <div class="seq-gen"><img src="media/City0/images/gen.png" alt="gen" /></div>
+          <!-- dots injected -->
+        </div>
+
         <div id="trialCounter" class="muted">Trial 1</div>
 
+        <!-- Choices -->
         <div id="choices" class="choice-grid"></div>
 
-        <div class="buttons" style="justify-content:space-between">
+        <!-- Controls -->
+        <div class="btn-row">
           <button class="btn" type="button" onclick="history.back()">Back</button>
-          <div style="display:flex; gap:10px">
+          <div style="display:flex;gap:10px">
             <button id="submitBtn" class="btn primary" disabled>Submit</button>
             <button id="nextBtn" class="btn" disabled>Next</button>
           </div>
@@ -42,83 +69,285 @@
   </main>
 
   <script>
-    const TRIALS = [{"trial": 1, "event_id": 1, "choices": [3, 2, 1], "correct": 3}, {"trial": 2, "event_id": 2, "choices": [2, 1, 3], "correct": 1}, {"trial": 3, "event_id": 3, "choices": [1, 3, 2], "correct": 2}];
+    /* ========== Config / paths ========== */
+    const lang = (localStorage.getItem("ct_language") || "EN").toLowerCase(); // 'en', 'de', ...
+    const instrFirst = `media/City0/audio/${lang}/instructions/gen_first.mp3`;
+    const instrNext  = `media/City0/audio/${lang}/instructions/gen_next.mp3`;
+    const animPath   = (n) => `media/City0/animations/${lang}/${n}.mp4`;
+    const fbPath     = (name) => `media/City0/audio/${lang}/feedback/${name}`;
 
+    // Where we load trials from (export your sheet to this JSON)
+    const TRIALS_URL = `/config/trials_city0_gen.json`; // [{"choices":[3,2,1],"correct":3}, ...]
+
+    // Track currently playing media so we can unmute + restart on first user gesture
+    const ACTIVE_MEDIA = new Set();
+    function trackMedia(el) {
+      ACTIVE_MEDIA.add(el);
+      const cleanup = () => ACTIVE_MEDIA.delete(el);
+      el.addEventListener("ended", cleanup, { once:true });
+      el.addEventListener("error", cleanup, { once:true });
+      return el;
+    }
+
+    /* ========== DOM ========== */
+    const grid         = document.getElementById("choices");
+    const trialCounter = document.getElementById("trialCounter");
+    const submitBtn    = document.getElementById("submitBtn");
+    const nextBtn      = document.getElementById("nextBtn");
+    const feedback     = document.getElementById("feedback");
+    const seqbar       = document.getElementById("seqbar");
+
+    /* ========== State ========== */
+    let TRIALS = [];
     let idx = 0;
     let selected = null;
+    let sequenceDone = false;
+    let globalMuted = true;       // autoplay-safe; flips after first gesture
+    let currentInstr = null;      // Audio() for current trial instruction
+    let currentPlaying = null;    // <video> currently playing in sequence
 
-    const choicesEl = document.getElementById('choices');
-    const trialCounter = document.getElementById('trialCounter');
-    const submitBtn = document.getElementById('submitBtn');
-    const nextBtn = document.getElementById('nextBtn');
-    const feedback = document.getElementById('feedback');
+    /* ========== Progress bar ========== */
+    function renderSeqBar() {
+      seqbar.querySelectorAll(".seq-dot,.seq-arrow").forEach(el => el.remove());
+      for (let i=0;i<TRIALS.length;i++) {
+        const arrow = document.createElement("div");
+        arrow.className = "seq-arrow";
+        arrow.textContent = "➔";
+        seqbar.appendChild(arrow);
 
-    function animPath(n) { return 'media/City0/animations/${n}.mp4'; }
+        const dot = document.createElement("div");
+        dot.className = "seq-dot" + (i===idx ? " active" : i<idx ? " done" : "");
+        dot.textContent = i+1;
+        seqbar.appendChild(dot);
+      }
+    }
+
+    /* ========== Helpers ========== */
+    const setDisabled = (el)=>{ el.classList.remove("playing","ready"); el.classList.add("disabled"); };
+    const setPlaying  = (el)=>{ el.classList.remove("disabled","ready"); el.classList.add("playing"); };
+    const setReady    = (el)=>{ el.classList.remove("disabled","playing"); el.classList.add("ready"); };
+
+    function buildChoice(position /*1..3*/, eventId) {
+      const card = document.createElement("div");
+      card.className = "choice disabled";
+
+      const wrap = document.createElement("div");
+      wrap.className = "media-wrap";
+
+      const vid = trackMedia(document.createElement("video"));
+      vid.className = "anim";
+      vid.playsInline = true;
+      vid.preload = "auto";
+      vid.muted = globalMuted;
+
+      // Show first frame without starting the sequence
+      vid.addEventListener("loadeddata", () => {
+        vid.muted = true;
+        vid.play().then(()=>vid.pause()).catch(()=>{});
+      }, { once:true });
+
+      const src = document.createElement("source");
+      src.src = animPath(eventId);
+      src.type = "video/mp4";
+      vid.appendChild(src);
+      wrap.appendChild(vid);
+
+      const label = document.createElement("div");
+      label.className = "label";
+      label.textContent = `Option ${position}`;
+
+      card.appendChild(wrap);
+      card.appendChild(label);
+
+      card.addEventListener("click", () => {
+        if (!sequenceDone) return;
+        document.querySelectorAll(".choice").forEach(el => el.classList.remove("selected"));
+        card.classList.add("selected");
+        selected = position;      // label 1/2/3 (not the event id)
+        submitBtn.disabled = false;
+      });
+
+      return { card, vid };
+    }
+
+    function playOne(holder, onEnd) {
+      const v = holder.vid;
+      v.muted = globalMuted;
+      try { v.currentTime = 0; } catch {}
+      v.load();
+      setPlaying(holder.card);
+
+      currentPlaying = v;
+
+      v.addEventListener("canplay", () => { if (v.paused) v.play().catch(()=>{}); }, { once:true });
+      v.addEventListener("error",   () => { setReady(holder.card); currentPlaying = null; onEnd && onEnd(); }, { once:true });
+      v.addEventListener("ended",   () => { setReady(holder.card); currentPlaying = null; onEnd && onEnd(); }, { once:true });
+
+      v.play().catch(()=>{});
+    }
+
+    function startInstructionThenSequence(c1, c2, c3) {
+      function startSequenceOnce() {
+        if (startSequenceOnce._ran) return;
+        startSequenceOnce._ran = true;
+        playOne(c1, () => playOne(c2, () => playOne(c3, () => { sequenceDone = true; })));
+      }
+
+      const file = (idx === 0) ? instrFirst : instrNext;  // first vs next
+      const instr = trackMedia(new Audio(file));
+      instr.preload = "auto";
+      instr.muted = globalMuted;
+      currentInstr = instr;
+
+      // muted autoplay allowed
+      instr.play().catch(()=>{});
+      instr.addEventListener("ended", startSequenceOnce, { once:true });
+      instr.addEventListener("error", startSequenceOnce, { once:true });
+      setTimeout(startSequenceOnce, 1500);
+    }
 
     function renderTrial() {
-      const t = TRIALS[idx];
-      trialCounter.textContent = 'Trial ' + (idx+1) + ' of ' + TRIALS.length;
+      const T = TRIALS[idx];
+      renderSeqBar();
+
+      trialCounter.textContent = `Trial ${idx+1} of ${TRIALS.length}`;
       feedback.textContent = "";
       submitBtn.disabled = true;
       nextBtn.disabled = true;
       selected = null;
+      sequenceDone = false;
+      currentInstr = null;
+      currentPlaying = null;
+      grid.innerHTML = "";
 
-      choicesEl.innerHTML = "";
-      t.choices.forEach((n) => {
-        const card = document.createElement('div');
-        card.className = 'choice';
-        card.dataset.value = n;
+      // Build in the exact order from JSON so positions match the sheet
+      const [ev1, ev2, ev3] = T.choices;
+      const c1 = buildChoice(1, ev1);
+      const c2 = buildChoice(2, ev2);
+      const c3 = buildChoice(3, ev3);
+      grid.appendChild(c1.card);
+      grid.appendChild(c2.card);
+      grid.appendChild(c3.card);
 
-        const vid = document.createElement('video');
-        vid.className = 'anim';
-        vid.muted = true;
-        vid.loop = true;
-        vid.playsInline = true;
-        vid.autoplay = true;
-        const src = document.createElement('source');
-        src.src = animPath(n);
-        src.type = 'video/mp4';
-        vid.appendChild(src);
+      setDisabled(c1.card); setDisabled(c2.card); setDisabled(c3.card);
 
-        const label = document.createElement('div');
-        label.style.textAlign = 'center';
-        label.style.padding = '6px 0 2px';
-        label.textContent = 'Option ' + n;
-
-        card.appendChild(vid);
-        card.appendChild(label);
-        card.addEventListener('click', () => {
-          document.querySelectorAll('.choice').forEach(el => el.classList.remove('selected'));
-          card.classList.add('selected');
-          selected = n;
-          submitBtn.disabled = false;
-        });
-
-        choicesEl.appendChild(card);
-      });
+      startInstructionThenSequence(c1, c2, c3);
     }
 
-    submitBtn.addEventListener('click', () => {
-      const t = TRIALS[idx];
-      if (selected == null) return;
-      const correct = Number(t.correct) === Number(selected);
-      feedback.textContent = correct ? '✅ Correct!' : ('❌ Incorrect. Correct answer: ' + t.correct);
-      nextBtn.disabled = false;
+    /* ========== Submit / Next ========== */
+    submitBtn.addEventListener("click", () => {
+      if (!sequenceDone || selected == null) return;
+      const T = TRIALS[idx];
+      const isCorrect = Number(selected) === Number(T.correct);
+
+      // Text feedback — always reference THIS trial's correct option
+      feedback.textContent = isCorrect
+        ? "✅ Correct!"
+        : `❌ Incorrect. It was actually Option ${T.correct}.`;
+
       submitBtn.disabled = true;
+      nextBtn.disabled = false;
+
+      // Mark progress
+      const dots = seqbar.querySelectorAll(".seq-dot");
+      if (dots[idx]) dots[idx].classList.add("done");
+
+      // Audio feedback — incorrect keyed by THIS trial's correct option
+      const clip = isCorrect ? "correct.mp3" : `gen_incorrect${T.correct}.mp3`;
+      const fb = trackMedia(new Audio(fbPath(clip)));
+      fb.preload = "auto";
+      fb.muted = globalMuted;
+      fb.play().catch(()=>{});
     });
 
-    nextBtn.addEventListener('click', () => {
+    nextBtn.addEventListener("click", () => {
       idx += 1;
       if (idx >= TRIALS.length) {
-        window.location.href = 'session_video.html?session=1';
+        window.location.href = "session_video.html?session=1";
       } else {
         renderTrial();
       }
     });
 
-    // init
-    renderTrial();
+    /* ========== Auto-unmute after first gesture ========== */
+    function enableAudioOnce() {
+      globalMuted = false;
+
+      // Unmute & nudge anything already playing
+      ACTIVE_MEDIA.forEach(el => {
+        try {
+          el.muted = false;
+          el.volume = 1;
+          // restart a hair earlier to attach audio reliably (Safari/iOS)
+          if (!el.paused) { try { el.pause(); } catch {} }
+          if (!isNaN(el.currentTime)) {
+            el.currentTime = Math.max(0, el.currentTime - 0.05);
+          }
+          el.play().catch(()=>{});
+        } catch {}
+      });
+
+      // Ensure current instruction (if any) is audible
+      if (currentInstr) {
+        try {
+          currentInstr.muted = false;
+          if (currentInstr.ended || currentInstr.currentTime < 0.1) {
+            currentInstr.currentTime = 0;
+          } else {
+            currentInstr.currentTime = Math.max(0, currentInstr.currentTime - 0.05);
+          }
+          currentInstr.play().catch(()=>{});
+        } catch {}
+      }
+
+      // Ensure current playing video is audible
+      if (currentPlaying) {
+        try {
+          currentPlaying.muted = false;
+          if (!currentPlaying.paused) { try { currentPlaying.pause(); } catch {} }
+          if (!isNaN(currentPlaying.currentTime)) {
+            currentPlaying.currentTime = Math.max(0, currentPlaying.currentTime - 0.05);
+          }
+          currentPlaying.play().catch(()=>{});
+        } catch {}
+      }
+
+      document.removeEventListener("click",       enableAudioOnce);
+      document.removeEventListener("keydown",     enableAudioOnce);
+      document.removeEventListener("pointerdown", enableAudioOnce);
+      document.removeEventListener("touchstart",  enableAudioOnce);
+    }
+    document.addEventListener("click",       enableAudioOnce, { once:true });
+    document.addEventListener("keydown",     enableAudioOnce, { once:true });
+    document.addEventListener("pointerdown", enableAudioOnce, { once:true });
+    document.addEventListener("touchstart",  enableAudioOnce, { once:true });
+
+    /* ========== Load trials dynamically, then boot ========== */
+    async function loadTrials() {
+      // Cache-bust in dev so updates to JSON show up
+      const url = TRIALS_URL + `?v=${Date.now()}`;
+      try {
+        const res = await fetch(url, { cache: "no-store" });
+        if (!res.ok) throw new Error("trials json not found");
+        const data = await res.json();
+        if (!Array.isArray(data) || !data.length) throw new Error("bad trials json");
+        TRIALS = data;
+      } catch (e) {
+        // Fallback: minimal practice set so the page is usable
+        TRIALS = [
+          { choices:[3,2,1], correct:3 },
+          { choices:[2,1,3], correct:1 },
+          { choices:[1,3,2], correct:2 }
+        ];
+      }
+    }
+
+    (async () => {
+      await loadTrials();
+      renderTrial();
+    })();
   </script>
+
   <script src="js/dev-tools.js"></script>
 </body>
 </html>
