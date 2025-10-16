@@ -71,3 +71,4 @@ node_modules/
 js/firebase-config.js
 Firebase-config.js
 
+.DS_Store

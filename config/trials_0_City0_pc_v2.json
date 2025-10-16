@@ -1,0 +1,53 @@
+[
+  {
+    "trial": 9,
+    "event_id": 3,
+    "correct": 1,
+    "mediaType": "video",
+    "mediaCity": "City0",
+    "choices": [
+      3,
+      2,
+      1
+    ],
+    "assets": [
+      "media/City0/animations/{lang}/3.mp4",
+      "media/City0/animations/{lang}/2.mp4",
+      "media/City0/animations/{lang}/1.mp4"
+    ]
+  },
+  {
+    "trial": 7,
+    "event_id": 1,
+    "correct": 2,
+    "mediaType": "video",
+    "mediaCity": "City0",
+    "choices": [
+      2,
+      1,
+      3
+    ],
+    "assets": [
+      "media/City0/animations/{lang}/2.mp4",
+      "media/City0/animations/{lang}/1.mp4",
+      "media/City0/animations/{lang}/3.mp4"
+    ]
+  },
+  {
+    "trial": 8,
+    "event_id": 2,
+    "correct": 3,
+    "mediaType": "video",
+    "mediaCity": "City0",
+    "choices": [
+      1,
+      3,
+      2
+    ],
+    "assets": [
+      "media/City0/animations/{lang}/1.mp4",
+      "media/City0/animations/{lang}/3.mp4",
+      "media/City0/animations/{lang}/2.mp4"
+    ]
+  }
+]

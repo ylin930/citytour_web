@@ -1,0 +1,206 @@
+[
+  {
+    "trial": 118,
+    "event_id": 10,
+    "correct": 2,
+    "mediaType": "video",
+    "mediaCity": "City2",
+    "choices": [
+      9,
+      10,
+      7
+    ],
+    "assets": [
+      "media/City2/animations/{lang}/9.mp4",
+      "media/City2/animations/{lang}/10.mp4",
+      "media/City2/animations/{lang}/7.mp4"
+    ]
+  },
+  {
+    "trial": 119,
+    "event_id": 7,
+    "correct": 1,
+    "mediaType": "video",
+    "mediaCity": "City2",
+    "choices": [
+      7,
+      9,
+      10
+    ],
+    "assets": [
+      "media/City2/animations/{lang}/7.mp4",
+      "media/City2/animations/{lang}/9.mp4",
+      "media/City2/animations/{lang}/10.mp4"
+    ]
+  },
+  {
+    "trial": 120,
+    "event_id": 12,
+    "correct": 3,
+    "mediaType": "video",
+    "mediaCity": "City2",
+    "choices": [
+      8,
+      11,
+      12
+    ],
+    "assets": [
+      "media/City2/animations/{lang}/8.mp4",
+      "media/City2/animations/{lang}/11.mp4",
+      "media/City2/animations/{lang}/12.mp4"
+    ]
+  },
+  {
+    "trial": 121,
+    "event_id": 9,
+    "correct": 3,
+    "mediaType": "video",
+    "mediaCity": "City2",
+    "choices": [
+      10,
+      7,
+      9
+    ],
+    "assets": [
+      "media/City2/animations/{lang}/10.mp4",
+      "media/City2/animations/{lang}/7.mp4",
+      "media/City2/animations/{lang}/9.mp4"
+    ]
+  },
+  {
+    "trial": 122,
+    "event_id": 8,
+    "correct": 2,
+    "mediaType": "video",
+    "mediaCity": "City2",
+    "choices": [
+      12,
+      8,
+      11
+    ],
+    "assets": [
+      "media/City2/animations/{lang}/12.mp4",
+      "media/City2/animations/{lang}/8.mp4",
+      "media/City2/animations/{lang}/11.mp4"
+    ]
+  },
+  {
+    "trial": 123,
+    "event_id": 11,
+    "correct": 1,
+    "mediaType": "video",
+    "mediaCity": "City2",
+    "choices": [
+      11,
+      12,
+      8
+    ],
+    "assets": [
+      "media/City2/animations/{lang}/11.mp4",
+      "media/City2/animations/{lang}/12.mp4",
+      "media/City2/animations/{lang}/8.mp4"
+    ]
+  },
+  {
+    "trial": 112,
+    "event_id": 1,
+    "correct": 2,
+    "mediaType": "video",
+    "mediaCity": "City2",
+    "choices": [
+      4,
+      1,
+      2
+    ],
+    "assets": [
+      "media/City2/animations/{lang}/4.mp4",
+      "media/City2/animations/{lang}/1.mp4",
+      "media/City2/animations/{lang}/2.mp4"
+    ]
+  },
+  {
+    "trial": 113,
+    "event_id": 2,
+    "correct": 1,
+    "mediaType": "video",
+    "mediaCity": "City2",
+    "choices": [
+      2,
+      4,
+      1
+    ],
+    "assets": [
+      "media/City2/animations/{lang}/2.mp4",
+      "media/City2/animations/{lang}/4.mp4",
+      "media/City2/animations/{lang}/1.mp4"
+    ]
+  },
+  {
+    "trial": 114,
+    "event_id": 3,
+    "correct": 1,
+    "mediaType": "video",
+    "mediaCity": "City2",
+    "choices": [
+      3,
+      5,
+      6
+    ],
+    "assets": [
+      "media/City2/animations/{lang}/3.mp4",
+      "media/City2/animations/{lang}/5.mp4",
+      "media/City2/animations/{lang}/6.mp4"
+    ]
+  },
+  {
+    "trial": 115,
+    "event_id": 4,
+    "correct": 3,
+    "mediaType": "video",
+    "mediaCity": "City2",
+    "choices": [
+      1,
+      2,
+      4
+    ],
+    "assets": [
+      "media/City2/animations/{lang}/1.mp4",
+      "media/City2/animations/{lang}/2.mp4",
+      "media/City2/animations/{lang}/4.mp4"
+    ]
+  },
+  {
+    "trial": 116,
+    "event_id": 5,
+    "correct": 3,
+    "mediaType": "video",
+    "mediaCity": "City2",
+    "choices": [
+      6,
+      3,
+      5
+    ],
+    "assets": [
+      "media/City2/animations/{lang}/6.mp4",
+      "media/City2/animations/{lang}/3.mp4",
+      "media/City2/animations/{lang}/5.mp4"
+    ]
+  },
+  {
+    "trial": 117,
+    "event_id": 6,
+    "correct": 2,
+    "mediaType": "video",
+    "mediaCity": "City2",
+    "choices": [
+      5,
+      6,
+      3
+    ],
+    "assets": [
+      "media/City2/animations/{lang}/5.mp4",
+      "media/City2/animations/{lang}/6.mp4",
+      "media/City2/animations/{lang}/3.mp4"
+    ]
+  }
+]

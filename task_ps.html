@@ -1,0 +1,174 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Placement Similarity Task</title>
+  <link rel="stylesheet" href="styles.css" />
+  <style>
+    .choice-grid{display:grid;grid-template-columns:repeat(3,minmax(220px,1fr));gap:16px}
+    .choice{display:flex;flex-direction:column;border-radius:14px;border:2px solid transparent;background:#fff;box-shadow:0 6px 16px rgba(0,0,0,.08);overflow:hidden}
+    .choice img{width:100%;height:260px;object-fit:cover;display:block;background:#000}
+    .label{text-align:center;padding:10px 8px;font-weight:600}
+    .choice.disabled{filter:grayscale(100%);opacity:.55;pointer-events:none}
+    .choice.ready{filter:none;opacity:1;pointer-events:auto}
+    .choice.selected{border-color:#2563eb;box-shadow:0 8px 20px rgba(37,99,235,.25)}
+    .seqbar{display:flex;align-items:center;gap:10px;margin:6px 0 14px}
+    .seq-dot{width:38px;height:38px;border-radius:10px;border:2px dashed #bbb;display:grid;place-items:center;color:#777;font-weight:700}
+    .seq-dot.active{border-style:solid;border-color:#2563eb;color:#2563eb}
+    .seq-dot.done{border-style:solid;border-color:#16a34a;background:#eafff2;color:#0f5132}
+  </style>
+</head>
+<body>
+  <main class="container">
+    <header class="header">
+      <div>
+        <div class="badge" id="badge">PS</div>
+        <div class="h1">Pick the matching picture</div>
+        <div class="sub">Listen to the instruction, then choose one.</div>
+      </div>
+    </header>
+
+    <section class="grid">
+      <div class="card" style="display:flex;flex-direction:column;gap:14px">
+        <div id="seqbar" class="seqbar"></div>
+        <div id="trialCounter" class="muted">Trial 1</div>
+        <div id="choices" class="choice-grid"></div>
+        <div style="display:flex;justify-content:space-between;gap:10px">
+          <button class="btn" type="button" onclick="history.back()">Back</button>
+          <div style="display:flex;gap:10px">
+            <button id="submitBtn" class="btn primary" disabled>Submit</button>
+            <button id="nextBtn" class="btn" disabled>Next</button>
+          </div>
+        </div>
+        <div id="feedback" class="muted"></div>
+      </div>
+    </section>
+  </main>
+
+  <script type="module">
+    const qs = new URLSearchParams(location.search);
+    const session = qs.get('session') || 'S1';
+    const city    = qs.get('city')    || 'City1';
+    const v       = qs.get('v')       || '1';
+    const task    = 'ps';
+    const lang    = (localStorage.getItem('ct_language') || 'EN').toLowerCase();
+    const trialsURL = qs.get('trials') || `config/trials_${session}_${city}_${task}_v${v}.json`;
+    const nextURL   = qs.get('next')   || `session_video.html?session=${encodeURIComponent(session)}`;
+
+    document.getElementById('badge').textContent = `PS • ${city} • ${session} v${v}`;
+
+    const introAudio = `media/${city}/audio/${lang}/instructions/ps_intro.mp3`;
+    const perTrialAudio = `media/${city}/audio/${lang}/instructions/ps.mp3`;
+
+    const grid = document.getElementById('choices');
+    const trialCounter = document.getElementById('trialCounter');
+    const submitBtn = document.getElementById('submitBtn');
+    const nextBtn = document.getElementById('nextBtn');
+    const feedback = document.getElementById('feedback');
+    const seqbar = document.getElementById('seqbar');
+
+    let TRIALS = [];
+    let idx = 0, selected = null, audioUnlocked = false;
+    let introDone = false;
+
+    function renderSeqBar(){
+      seqbar.innerHTML = '';
+      for(let i=0;i<TRIALS.length;i++){
+        const dot = document.createElement('div');
+        dot.className = 'seq-dot' + (i===idx?' active': i<idx?' done':'');
+        dot.textContent = i+1;
+        seqbar.appendChild(dot);
+      }
+    }
+
+    function buildChoice(position, imgUrl){
+      const card = document.createElement('div');
+      card.className = 'choice disabled';
+      const img = document.createElement('img');
+      img.src = imgUrl;
+      const label = document.createElement('div');
+      label.className='label';
+      label.textContent = `Option ${position}`;
+      card.appendChild(img); card.appendChild(label);
+
+      card.addEventListener('click', ()=>{
+        if(card.classList.contains('disabled')) return;
+        document.querySelectorAll('.choice').forEach(el=>el.classList.remove('selected'));
+        card.classList.add('selected');
+        selected = position;
+        submitBtn.disabled = false;
+      });
+
+      return card;
+    }
+
+    function playAudioOnce(url, onEnd){
+      const a = new Audio(url);
+      a.preload='auto'; a.muted=false; a.volume=1;
+      a.addEventListener('play', ()=>{ audioUnlocked = true; }, {once:true});
+      a.addEventListener('ended', ()=> onEnd && onEnd(), {once:true});
+      a.addEventListener('error', ()=> onEnd && onEnd(), {once:true});
+      a.play().catch(()=>{
+        // prompt
+        const bar=document.createElement('div'); bar.style.margin='6px 0 8px';
+        const btn=document.createElement('button'); btn.className='btn'; btn.type='button'; btn.textContent='▶ Play instruction';
+        btn.addEventListener('click', ()=>{
+          a.currentTime=0;
+          a.play().then(()=>{ bar.remove(); }).catch(()=>{ bar.remove(); onEnd&&onEnd(); });
+        }, {once:true});
+        seqbar.parentNode.insertBefore(bar, seqbar.nextSibling); bar.appendChild(btn);
+      });
+    }
+
+    function renderTrial(){
+      const T = TRIALS[idx];
+      renderSeqBar();
+      trialCounter.textContent = `Trial ${idx+1} of ${TRIALS.length}`;
+      feedback.textContent=''; submitBtn.disabled=true; nextBtn.disabled=true; selected=null;
+      grid.innerHTML='';
+
+      // T.assets has 3 image paths in the correct presentation order (correct image _1 is placed at T.correct)
+      const [i1,i2,i3] = T.assets;
+      const c1 = buildChoice(1,i1), c2 = buildChoice(2,i2), c3 = buildChoice(3,i3);
+      grid.appendChild(c1); grid.appendChild(c2); grid.appendChild(c3);
+
+      // per-trial instruction -> enable choices
+      Array.from(grid.children).forEach(el=>el.classList.add('disabled'));
+      playAudioOnce(perTrialAudio, ()=>{
+        Array.from(grid.children).forEach(el=>{ el.classList.remove('disabled'); el.classList.add('ready'); });
+      });
+    }
+
+    submitBtn.addEventListener('click', ()=>{
+      if(selected==null) return;
+      const T = TRIALS[idx];
+      const isCorrect = (selected === Number(T.correct));
+      feedback.textContent = isCorrect ? '✅ Correct!' : `❌ Incorrect. It was Option ${T.correct}.`;
+      submitBtn.disabled=true; nextBtn.disabled=false;
+      const dots = seqbar.querySelectorAll('.seq-dot'); if(dots[idx]) dots[idx].classList.add('done');
+    });
+
+    nextBtn.addEventListener('click', ()=>{
+      idx += 1;
+      if(idx >= TRIALS.length){
+        location.assign(nextURL);
+      } else {
+        renderTrial();
+      }
+    });
+
+    // boot: play intro once, then first trial
+    fetch(trialsURL).then(r=>r.json()).then(data=>{
+      TRIALS = Array.isArray(data)? data : [];
+      if(!TRIALS.length) throw new Error('No trials');
+      // intro once
+      playAudioOnce(introAudio, ()=>{ renderTrial(); });
+    }).catch(err=>{
+      feedback.textContent = 'Could not load trials.';
+      console.error(err);
+    });
+  </script>
+</body>
+</html>
+

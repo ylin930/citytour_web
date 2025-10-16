@@ -1,0 +1,206 @@
+[
+  {
+    "trial": 19,
+    "event_id": 7,
+    "correct": 2,
+    "mediaType": "video",
+    "mediaCity": "City1",
+    "choices": [
+      8,
+      7,
+      10
+    ],
+    "assets": [
+      "media/City1/animations/{lang}/8.mp4",
+      "media/City1/animations/{lang}/7.mp4",
+      "media/City1/animations/{lang}/10.mp4"
+    ]
+  },
+  {
+    "trial": 20,
+    "event_id": 8,
+    "correct": 3,
+    "mediaType": "video",
+    "mediaCity": "City1",
+    "choices": [
+      7,
+      10,
+      8
+    ],
+    "assets": [
+      "media/City1/animations/{lang}/7.mp4",
+      "media/City1/animations/{lang}/10.mp4",
+      "media/City1/animations/{lang}/8.mp4"
+    ]
+  },
+  {
+    "trial": 21,
+    "event_id": 9,
+    "correct": 3,
+    "mediaType": "video",
+    "mediaCity": "City1",
+    "choices": [
+      12,
+      11,
+      9
+    ],
+    "assets": [
+      "media/City1/animations/{lang}/12.mp4",
+      "media/City1/animations/{lang}/11.mp4",
+      "media/City1/animations/{lang}/9.mp4"
+    ]
+  },
+  {
+    "trial": 22,
+    "event_id": 10,
+    "correct": 1,
+    "mediaType": "video",
+    "mediaCity": "City1",
+    "choices": [
+      10,
+      8,
+      7
+    ],
+    "assets": [
+      "media/City1/animations/{lang}/10.mp4",
+      "media/City1/animations/{lang}/8.mp4",
+      "media/City1/animations/{lang}/7.mp4"
+    ]
+  },
+  {
+    "trial": 23,
+    "event_id": 11,
+    "correct": 1,
+    "mediaType": "video",
+    "mediaCity": "City1",
+    "choices": [
+      11,
+      9,
+      12
+    ],
+    "assets": [
+      "media/City1/animations/{lang}/11.mp4",
+      "media/City1/animations/{lang}/9.mp4",
+      "media/City1/animations/{lang}/12.mp4"
+    ]
+  },
+  {
+    "trial": 24,
+    "event_id": 12,
+    "correct": 2,
+    "mediaType": "video",
+    "mediaCity": "City1",
+    "choices": [
+      9,
+      12,
+      11
+    ],
+    "assets": [
+      "media/City1/animations/{lang}/9.mp4",
+      "media/City1/animations/{lang}/12.mp4",
+      "media/City1/animations/{lang}/11.mp4"
+    ]
+  },
+  {
+    "trial": 13,
+    "event_id": 1,
+    "correct": 2,
+    "mediaType": "video",
+    "mediaCity": "City1",
+    "choices": [
+      2,
+      1,
+      4
+    ],
+    "assets": [
+      "media/City1/animations/{lang}/2.mp4",
+      "media/City1/animations/{lang}/1.mp4",
+      "media/City1/animations/{lang}/4.mp4"
+    ]
+  },
+  {
+    "trial": 14,
+    "event_id": 2,
+    "correct": 3,
+    "mediaType": "video",
+    "mediaCity": "City1",
+    "choices": [
+      1,
+      4,
+      2
+    ],
+    "assets": [
+      "media/City1/animations/{lang}/1.mp4",
+      "media/City1/animations/{lang}/4.mp4",
+      "media/City1/animations/{lang}/2.mp4"
+    ]
+  },
+  {
+    "trial": 15,
+    "event_id": 3,
+    "correct": 1,
+    "mediaType": "video",
+    "mediaCity": "City1",
+    "choices": [
+      3,
+      6,
+      5
+    ],
+    "assets": [
+      "media/City1/animations/{lang}/3.mp4",
+      "media/City1/animations/{lang}/6.mp4",
+      "media/City1/animations/{lang}/5.mp4"
+    ]
+  },
+  {
+    "trial": 16,
+    "event_id": 4,
+    "correct": 1,
+    "mediaType": "video",
+    "mediaCity": "City1",
+    "choices": [
+      4,
+      2,
+      1
+    ],
+    "assets": [
+      "media/City1/animations/{lang}/4.mp4",
+      "media/City1/animations/{lang}/2.mp4",
+      "media/City1/animations/{lang}/1.mp4"
+    ]
+  },
+  {
+    "trial": 17,
+    "event_id": 5,
+    "correct": 2,
+    "mediaType": "video",
+    "mediaCity": "City1",
+    "choices": [
+      6,
+      5,
+      3
+    ],
+    "assets": [
+      "media/City1/animations/{lang}/6.mp4",
+      "media/City1/animations/{lang}/5.mp4",
+      "media/City1/animations/{lang}/3.mp4"
+    ]
+  },
+  {
+    "trial": 18,
+    "event_id": 6,
+    "correct": 3,
+    "mediaType": "video",
+    "mediaCity": "City1",
+    "choices": [
+      5,
+      3,
+      6
+    ],
+    "assets": [
+      "media/City1/animations/{lang}/5.mp4",
+      "media/City1/animations/{lang}/3.mp4",
+      "media/City1/animations/{lang}/6.mp4"
+    ]
+  }
+]

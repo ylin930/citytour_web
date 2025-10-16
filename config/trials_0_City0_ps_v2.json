@@ -1,0 +1,53 @@
+[
+  {
+    "trial": 6,
+    "event_id": 1,
+    "correct": 1,
+    "mediaType": "image",
+    "mediaCity": "City0",
+    "choices": [
+      1,
+      2,
+      3
+    ],
+    "assets": [
+      "media/City0/locations/1_1.png",
+      "media/City0/locations/1_2.png",
+      "media/City0/locations/1_3.png"
+    ]
+  },
+  {
+    "trial": 4,
+    "event_id": 2,
+    "correct": 2,
+    "mediaType": "image",
+    "mediaCity": "City0",
+    "choices": [
+      2,
+      1,
+      3
+    ],
+    "assets": [
+      "media/City0/locations/2_2.png",
+      "media/City0/locations/2_1.png",
+      "media/City0/locations/2_3.png"
+    ]
+  },
+  {
+    "trial": 5,
+    "event_id": 3,
+    "correct": 3,
+    "mediaType": "image",
+    "mediaCity": "City0",
+    "choices": [
+      2,
+      3,
+      1
+    ],
+    "assets": [
+      "media/City0/locations/3_2.png",
+      "media/City0/locations/3_3.png",
+      "media/City0/locations/3_1.png"
+    ]
+  }
+]

@@ -1,353 +1,585 @@
 <!doctype html>
 <html lang="en">
-<head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>City 0 – Generator Practice</title>
-  <link rel="stylesheet" href="styles.css" />
-  <style>
-    /* Progress bar */
-    .seqbar{display:flex;align-items:center;gap:10px;margin:6px 0 14px}
-    .seq-gen{width:42px;height:42px;border-radius:8px;overflow:hidden;flex:0 0 auto;box-shadow:0 4px 12px rgba(0,0,0,.12);background:#fff}
-    .seq-gen img{width:100%;height:100%;object-fit:cover;display:block}
-    .seq-arrow{opacity:.5;font-weight:700;user-select:none}
-    .seq-dot{width:42px;height:42px;border-radius:10px;border:2px dashed #bbb;background:#fff;display:grid;place-items:center;font-weight:700;color:#777;flex:0 0 auto;transition:.2s}
-    .seq-dot.active{border-style:solid;border-color:#2563eb;color:#2563eb}
-    .seq-dot.done{border-style:solid;border-color:#16a34a;background:#eafff2;color:#0f5132}
-
-    /* Choices */
-    .choice-grid{display:grid;grid-template-columns:repeat(3,minmax(240px,1fr));gap:16px;align-items:stretch}
-    .choice{display:flex;flex-direction:column;overflow:hidden;border-radius:14px;border:2px solid transparent;background:#fff;box-shadow:0 6px 16px rgba(0,0,0,.08);transition:.2s}
-    .media-wrap{position:relative;width:100%;height:260px;overflow:hidden;background:#000}
-    video.anim{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:center;display:block}
-    .label{text-align:center;padding:10px 8px;font-weight:600}
-
-    .choice.disabled{filter:grayscale(100%);opacity:.55;pointer-events:none}
-    .choice.playing{filter:none;opacity:1;pointer-events:none;border-color:#a3bffa}
-    .choice.ready{filter:none;opacity:1;pointer-events:auto}
-    .choice.selected{border-color:#2563eb;box-shadow:0 8px 20px rgba(37,99,235,.25)}
-
-    .muted{opacity:.7;font-size:14px}
-    .btn-row{display:flex;justify-content:space-between;gap:10px}
-  </style>
-</head>
-<body>
-  <main class="container">
-    <header class="header">
-      <div>
-        <div class="badge">CITY 0 • PRACTICE</div>
-        <div class="h1">Pick the matching animation</div>
-        <div class="sub">Which place would you visit first?</div>
-      </div>
-    </header>
-
-    <section class="grid">
-      <div class="card" style="display:flex;flex-direction:column;gap:14px">
-        <!-- Progress -->
-        <div id="seqbar" class="seqbar">
-          <div class="seq-gen"><img src="media/City0/images/gen.png" alt="gen" /></div>
-          <!-- dots injected -->
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>City 0 – Generator Practice</title>
+    <link rel="stylesheet" href="styles.css" />
+    <style>
+      .seqbar {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        margin: 6px 0 14px;
+      }
+      .seq-gen {
+        width: 42px;
+        height: 42px;
+        border-radius: 8px;
+        overflow: hidden;
+        flex: 0 0 auto;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
+        background: #fff;
+      }
+      .seq-gen img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        display: block;
+      }
+      .seq-arrow {
+        opacity: 0.5;
+        font-weight: 700;
+        user-select: none;
+      }
+      .seq-dot {
+        width: 42px;
+        height: 42px;
+        border-radius: 10px;
+        border: 2px dashed #bbb;
+        background: #fff;
+        display: grid;
+        place-items: center;
+        font-weight: 700;
+        color: #777;
+        flex: 0 0 auto;
+        transition: 0.2s;
+      }
+      .seq-dot.active {
+        border-style: solid;
+        border-color: #2563eb;
+        color: #2563eb;
+      }
+      .seq-dot.done {
+        border-style: solid;
+        border-color: #16a34a;
+        background: #eafff2;
+        color: #0f5132;
+      }
+      .choice-grid {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(240px, 1fr));
+        gap: 16px;
+        align-items: stretch;
+      }
+      .choice {
+        display: flex;
+        flex-direction: column;
+        overflow: hidden;
+        border-radius: 14px;
+        border: 2px solid transparent;
+        background: #fff;
+        box-shadow: 0 6px 16px rgba(0, 0, 0, 0.08);
+        transition: 0.2s;
+      }
+      .media-wrap {
+        position: relative;
+        width: 100%;
+        height: 260px;
+        overflow: hidden;
+        background: #000;
+      }
+      video.anim {
+        position: absolute;
+        inset: 0;
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        object-position: center;
+        display: block;
+      }
+      .label {
+        text-align: center;
+        padding: 10px 8px;
+        font-weight: 600;
+      }
+      .choice.disabled {
+        filter: grayscale(100%);
+        opacity: 0.55;
+        pointer-events: none;
+      }
+      .choice.playing {
+        filter: none;
+        opacity: 1;
+        pointer-events: none;
+        border-color: #a3bffa;
+      }
+      .choice.ready {
+        filter: none;
+        opacity: 1;
+        pointer-events: auto;
+      }
+      .choice.selected {
+        border-color: #2563eb;
+        box-shadow: 0 8px 20px rgba(37, 99, 235, 0.25);
+      }
+      .muted {
+        opacity: 0.7;
+        font-size: 14px;
+      }
+      .btn-row {
+        display: flex;
+        justify-content: space-between;
+        gap: 10px;
+      }
+    </style>
+  </head>
+  <body>
+    <main class="container">
+      <header class="header">
+        <div>
+          <div class="badge">CITY 0 • PRACTICE</div>
+          <div class="h1">Pick the matching animation</div>
+          <div class="sub">Please select the correct option before moving on.</div>
         </div>
+      </header>
 
-        <div id="trialCounter" class="muted">Trial 1</div>
-
-        <!-- Choices -->
-        <div id="choices" class="choice-grid"></div>
-
-        <!-- Controls -->
-        <div class="btn-row">
-          <button class="btn" type="button" onclick="history.back()">Back</button>
-          <div style="display:flex;gap:10px">
-            <button id="submitBtn" class="btn primary" disabled>Submit</button>
-            <button id="nextBtn" class="btn" disabled>Next</button>
+      <section class="grid">
+        <div class="card" style="display: flex; flex-direction: column; gap: 14px">
+          <div id="seqbar" class="seqbar">
+            <div class="seq-gen"><img src="media/City0/images/gen.png" alt="gen" /></div>
           </div>
+
+          <div id="trialCounter" class="muted">Trial 1</div>
+          <div id="choices" class="choice-grid"></div>
+
+          <div class="btn-row">
+            <button class="btn" type="button" onclick="history.back()">Back</button>
+            <div style="display: flex; gap: 10px">
+              <button id="submitBtn" class="btn primary" disabled>Submit</button>
+              <button id="nextBtn" class="btn" disabled>Next</button>
+            </div>
+          </div>
+
+          <div id="feedback" class="muted"></div>
         </div>
+      </section>
+    </main>
 
-        <div id="feedback" class="muted"></div>
-      </div>
-    </section>
-  </main>
+    <script src="js/firebase-config.js"></script>
+    <script type="module">
+      import { initializeApp } from "https://www.gstatic.com/firebasejs/10.13.1/firebase-app.js";
+      import {
+        getFirestore,
+        collection,
+        addDoc,
+        serverTimestamp
+      } from "https://www.gstatic.com/firebasejs/10.13.1/firebase-firestore.js";
 
-  <script>
-    /* ========== Config / paths ========== */
-    const lang = (localStorage.getItem("ct_language") || "EN").toLowerCase(); // 'en', 'de', ...
-    const instrFirst = `media/City0/audio/${lang}/instructions/gen_first.mp3`;
-    const instrNext  = `media/City0/audio/${lang}/instructions/gen_next.mp3`;
-    const animPath   = (n) => `media/City0/animations/${lang}/${n}.mp4`;
-    const fbPath     = (name) => `media/City0/audio/${lang}/feedback/${name}`;
+      const CITY = new URLSearchParams(location.search).get("city") || "City0";
+      const lang = (localStorage.getItem("ct_language") || "EN").toLowerCase();
+      const instrFirst = `media/${CITY}/audio/${lang}/instructions/gen_first.mp3`;
+      const instrNext = `media/${CITY}/audio/${lang}/instructions/gen_next.mp3`;
+      const animPath = (n) => `media/${CITY}/animations/${lang}/${n}.mp4`;
+      const fbPath = (name) => `media/${CITY}/audio/${lang}/feedback/${name}`;
+      const TRIALS_URL = `config/trials_${CITY.toLowerCase()}_gen.json`;
 
-    // Where we load trials from (export your sheet to this JSON)
-    const TRIALS_URL = `/config/trials_city0_gen.json`; // [{"choices":[3,2,1],"correct":3}, ...]
-
-    // Track currently playing media so we can unmute + restart on first user gesture
-    const ACTIVE_MEDIA = new Set();
-    function trackMedia(el) {
-      ACTIVE_MEDIA.add(el);
-      const cleanup = () => ACTIVE_MEDIA.delete(el);
-      el.addEventListener("ended", cleanup, { once:true });
-      el.addEventListener("error", cleanup, { once:true });
-      return el;
-    }
-
-    /* ========== DOM ========== */
-    const grid         = document.getElementById("choices");
-    const trialCounter = document.getElementById("trialCounter");
-    const submitBtn    = document.getElementById("submitBtn");
-    const nextBtn      = document.getElementById("nextBtn");
-    const feedback     = document.getElementById("feedback");
-    const seqbar       = document.getElementById("seqbar");
-
-    /* ========== State ========== */
-    let TRIALS = [];
-    let idx = 0;
-    let selected = null;
-    let sequenceDone = false;
-    let globalMuted = true;       // autoplay-safe; flips after first gesture
-    let currentInstr = null;      // Audio() for current trial instruction
-    let currentPlaying = null;    // <video> currently playing in sequence
-
-    /* ========== Progress bar ========== */
-    function renderSeqBar() {
-      seqbar.querySelectorAll(".seq-dot,.seq-arrow").forEach(el => el.remove());
-      for (let i=0;i<TRIALS.length;i++) {
-        const arrow = document.createElement("div");
-        arrow.className = "seq-arrow";
-        arrow.textContent = "➔";
-        seqbar.appendChild(arrow);
-
-        const dot = document.createElement("div");
-        dot.className = "seq-dot" + (i===idx ? " active" : i<idx ? " done" : "");
-        dot.textContent = i+1;
-        seqbar.appendChild(dot);
-      }
-    }
-
-    /* ========== Helpers ========== */
-    const setDisabled = (el)=>{ el.classList.remove("playing","ready"); el.classList.add("disabled"); };
-    const setPlaying  = (el)=>{ el.classList.remove("disabled","ready"); el.classList.add("playing"); };
-    const setReady    = (el)=>{ el.classList.remove("disabled","playing"); el.classList.add("ready"); };
-
-    function buildChoice(position /*1..3*/, eventId) {
-      const card = document.createElement("div");
-      card.className = "choice disabled";
-
-      const wrap = document.createElement("div");
-      wrap.className = "media-wrap";
-
-      const vid = trackMedia(document.createElement("video"));
-      vid.className = "anim";
-      vid.playsInline = true;
-      vid.preload = "auto";
-      vid.muted = globalMuted;
-
-      // Show first frame without starting the sequence
-      vid.addEventListener("loadeddata", () => {
-        vid.muted = true;
-        vid.play().then(()=>vid.pause()).catch(()=>{});
-      }, { once:true });
-
-      const src = document.createElement("source");
-      src.src = animPath(eventId);
-      src.type = "video/mp4";
-      vid.appendChild(src);
-      wrap.appendChild(vid);
-
-      const label = document.createElement("div");
-      label.className = "label";
-      label.textContent = `Option ${position}`;
-
-      card.appendChild(wrap);
-      card.appendChild(label);
-
-      card.addEventListener("click", () => {
-        if (!sequenceDone) return;
-        document.querySelectorAll(".choice").forEach(el => el.classList.remove("selected"));
-        card.classList.add("selected");
-        selected = position;      // label 1/2/3 (not the event id)
-        submitBtn.disabled = false;
-      });
-
-      return { card, vid };
-    }
-
-    function playOne(holder, onEnd) {
-      const v = holder.vid;
-      v.muted = globalMuted;
-      try { v.currentTime = 0; } catch {}
-      v.load();
-      setPlaying(holder.card);
-
-      currentPlaying = v;
-
-      v.addEventListener("canplay", () => { if (v.paused) v.play().catch(()=>{}); }, { once:true });
-      v.addEventListener("error",   () => { setReady(holder.card); currentPlaying = null; onEnd && onEnd(); }, { once:true });
-      v.addEventListener("ended",   () => { setReady(holder.card); currentPlaying = null; onEnd && onEnd(); }, { once:true });
-
-      v.play().catch(()=>{});
-    }
-
-    function startInstructionThenSequence(c1, c2, c3) {
-      function startSequenceOnce() {
-        if (startSequenceOnce._ran) return;
-        startSequenceOnce._ran = true;
-        playOne(c1, () => playOne(c2, () => playOne(c3, () => { sequenceDone = true; })));
-      }
-
-      const file = (idx === 0) ? instrFirst : instrNext;  // first vs next
-      const instr = trackMedia(new Audio(file));
-      instr.preload = "auto";
-      instr.muted = globalMuted;
-      currentInstr = instr;
-
-      // muted autoplay allowed
-      instr.play().catch(()=>{});
-      instr.addEventListener("ended", startSequenceOnce, { once:true });
-      instr.addEventListener("error", startSequenceOnce, { once:true });
-      setTimeout(startSequenceOnce, 1500);
-    }
-
-    function renderTrial() {
-      const T = TRIALS[idx];
-      renderSeqBar();
-
-      trialCounter.textContent = `Trial ${idx+1} of ${TRIALS.length}`;
-      feedback.textContent = "";
-      submitBtn.disabled = true;
-      nextBtn.disabled = true;
-      selected = null;
-      sequenceDone = false;
-      currentInstr = null;
-      currentPlaying = null;
-      grid.innerHTML = "";
-
-      // Build in the exact order from JSON so positions match the sheet
-      const [ev1, ev2, ev3] = T.choices;
-      const c1 = buildChoice(1, ev1);
-      const c2 = buildChoice(2, ev2);
-      const c3 = buildChoice(3, ev3);
-      grid.appendChild(c1.card);
-      grid.appendChild(c2.card);
-      grid.appendChild(c3.card);
-
-      setDisabled(c1.card); setDisabled(c2.card); setDisabled(c3.card);
-
-      startInstructionThenSequence(c1, c2, c3);
-    }
-
-    /* ========== Submit / Next ========== */
-    submitBtn.addEventListener("click", () => {
-      if (!sequenceDone || selected == null) return;
-      const T = TRIALS[idx];
-      const isCorrect = Number(selected) === Number(T.correct);
-
-      // Text feedback — always reference THIS trial's correct option
-      feedback.textContent = isCorrect
-        ? "✅ Correct!"
-        : `❌ Incorrect. It was actually Option ${T.correct}.`;
-
-      submitBtn.disabled = true;
-      nextBtn.disabled = false;
-
-      // Mark progress
-      const dots = seqbar.querySelectorAll(".seq-dot");
-      if (dots[idx]) dots[idx].classList.add("done");
-
-      // Audio feedback — incorrect keyed by THIS trial's correct option
-      const clip = isCorrect ? "correct.mp3" : `gen_incorrect${T.correct}.mp3`;
-      const fb = trackMedia(new Audio(fbPath(clip)));
-      fb.preload = "auto";
-      fb.muted = globalMuted;
-      fb.play().catch(()=>{});
-    });
-
-    nextBtn.addEventListener("click", () => {
-      idx += 1;
-      if (idx >= TRIALS.length) {
-        window.location.href = "session_video.html?session=1";
-      } else {
-        renderTrial();
-      }
-    });
-
-    /* ========== Auto-unmute after first gesture ========== */
-    function enableAudioOnce() {
-      globalMuted = false;
-
-      // Unmute & nudge anything already playing
-      ACTIVE_MEDIA.forEach(el => {
-        try {
-          el.muted = false;
-          el.volume = 1;
-          // restart a hair earlier to attach audio reliably (Safari/iOS)
-          if (!el.paused) { try { el.pause(); } catch {} }
-          if (!isNaN(el.currentTime)) {
-            el.currentTime = Math.max(0, el.currentTime - 0.05);
-          }
-          el.play().catch(()=>{});
-        } catch {}
-      });
-
-      // Ensure current instruction (if any) is audible
-      if (currentInstr) {
-        try {
-          currentInstr.muted = false;
-          if (currentInstr.ended || currentInstr.currentTime < 0.1) {
-            currentInstr.currentTime = 0;
-          } else {
-            currentInstr.currentTime = Math.max(0, currentInstr.currentTime - 0.05);
-          }
-          currentInstr.play().catch(()=>{});
-        } catch {}
-      }
-
-      // Ensure current playing video is audible
-      if (currentPlaying) {
-        try {
-          currentPlaying.muted = false;
-          if (!currentPlaying.paused) { try { currentPlaying.pause(); } catch {} }
-          if (!isNaN(currentPlaying.currentTime)) {
-            currentPlaying.currentTime = Math.max(0, currentPlaying.currentTime - 0.05);
-          }
-          currentPlaying.play().catch(()=>{});
-        } catch {}
-      }
-
-      document.removeEventListener("click",       enableAudioOnce);
-      document.removeEventListener("keydown",     enableAudioOnce);
-      document.removeEventListener("pointerdown", enableAudioOnce);
-      document.removeEventListener("touchstart",  enableAudioOnce);
-    }
-    document.addEventListener("click",       enableAudioOnce, { once:true });
-    document.addEventListener("keydown",     enableAudioOnce, { once:true });
-    document.addEventListener("pointerdown", enableAudioOnce, { once:true });
-    document.addEventListener("touchstart",  enableAudioOnce, { once:true });
-
-    /* ========== Load trials dynamically, then boot ========== */
-    async function loadTrials() {
-      // Cache-bust in dev so updates to JSON show up
-      const url = TRIALS_URL + `?v=${Date.now()}`;
+      let db = null;
       try {
-        const res = await fetch(url, { cache: "no-store" });
-        if (!res.ok) throw new Error("trials json not found");
-        const data = await res.json();
-        if (!Array.isArray(data) || !data.length) throw new Error("bad trials json");
-        TRIALS = data;
+        const app = initializeApp(window.FB_CONFIG);
+        db = getFirestore(app);
       } catch (e) {
-        // Fallback: minimal practice set so the page is usable
-        TRIALS = [
-          { choices:[3,2,1], correct:3 },
-          { choices:[2,1,3], correct:1 },
-          { choices:[1,3,2], correct:2 }
-        ];
+        console.warn("Firebase optional: proceeding without DB (no FB_CONFIG or SDK not available).");
       }
-    }
 
-    (async () => {
-      await loadTrials();
-      renderTrial();
-    })();
-  </script>
+      const ACTIVE_MEDIA = new Set();
+      function trackMedia(el) {
+        ACTIVE_MEDIA.add(el);
+        const cleanup = () => ACTIVE_MEDIA.delete(el);
+        el.addEventListener("ended", cleanup, { once: true });
+        el.addEventListener("error", cleanup, { once: true });
+        return el;
+      }
 
-  <script src="js/dev-tools.js"></script>
-</body>
+      const grid = document.getElementById("choices");
+      const trialCounter = document.getElementById("trialCounter");
+      const submitBtn = document.getElementById("submitBtn");
+      const nextBtn = document.getElementById("nextBtn");
+      const feedback = document.getElementById("feedback");
+      const seqbar = document.getElementById("seqbar");
+
+      let TRIALS = [];
+      let idx = 0;
+      let selected = null;
+      let sequenceDone = false;
+      let globalMuted = true;
+      let currentInstr = null;
+      let currentPlaying = null;
+      let audioUnlocked = false; // becomes true once instruction starts audibly (or user taps)
+
+      function renderSeqBar() {
+        seqbar.querySelectorAll(".seq-dot,.seq-arrow").forEach((el) => el.remove());
+        for (let i = 0; i < TRIALS.length; i++) {
+          const arrow = document.createElement("div");
+          arrow.className = "seq-arrow";
+          arrow.textContent = "➔";
+          seqbar.appendChild(arrow);
+
+          const dot = document.createElement("div");
+          dot.className = "seq-dot" + (i === idx ? " active" : i < idx ? " done" : "");
+          dot.textContent = i + 1;
+          seqbar.appendChild(dot);
+        }
+      }
+
+      const setDisabled = (el) => {
+        el.classList.remove("playing", "ready");
+        el.classList.add("disabled");
+      };
+      const setPlaying = (el) => {
+        el.classList.remove("disabled", "ready");
+        el.classList.add("playing");
+      };
+      const setReady = (el) => {
+        el.classList.remove("disabled", "playing");
+        el.classList.add("ready");
+      };
+
+      function buildChoice(position, eventId) {
+        const card = document.createElement("div");
+        card.className = "choice disabled";
+
+        const wrap = document.createElement("div");
+        wrap.className = "media-wrap";
+
+        const vid = trackMedia(document.createElement("video"));
+        vid.className = "anim";
+        vid.playsInline = true;
+        vid.preload = "auto";
+        vid.muted = globalMuted;
+
+        vid.addEventListener(
+          "loadeddata",
+          () => {
+            vid.muted = true;
+            vid
+              .play()
+              .then(() => vid.pause())
+              .catch(() => {});
+          },
+          { once: true }
+        );
+
+        const src = document.createElement("source");
+        src.src = animPath(eventId);
+        src.type = "video/mp4";
+        vid.appendChild(src);
+        wrap.appendChild(vid);
+
+        const label = document.createElement("div");
+        label.className = "label";
+        label.textContent = `Option ${position}`;
+
+        card.appendChild(wrap);
+        card.appendChild(label);
+
+        card.addEventListener("click", () => {
+          if (!sequenceDone) return;
+          document.querySelectorAll(".choice").forEach((el) => el.classList.remove("selected"));
+          card.classList.add("selected");
+          selected = position;
+          submitBtn.disabled = false;
+        });
+
+        return { card, vid };
+      }
+
+      function playOne(holder, onEnd) {
+        const v = holder.vid;
+        v.muted = !audioUnlocked ? true : false; // ← key change
+        if (audioUnlocked) v.volume = 1;
+
+        try {
+          v.currentTime = 0;
+        } catch {}
+        v.load();
+        setPlaying(holder.card);
+
+        currentPlaying = v;
+
+        v.addEventListener(
+          "canplay",
+          () => {
+            if (audioUnlocked) v.muted = false; // ensure unmuted after ready
+            if (v.paused) v.play().catch(() => {});
+          },
+          { once: true }
+        );
+
+        v.addEventListener(
+          "error",
+          () => {
+            setReady(holder.card);
+            currentPlaying = null;
+            onEnd && onEnd();
+          },
+          { once: true }
+        );
+
+        v.addEventListener(
+          "ended",
+          () => {
+            setReady(holder.card);
+            currentPlaying = null;
+            onEnd && onEnd();
+          },
+          { once: true }
+        );
+
+        v.play().catch(() => {});
+      }
+
+      function showPlayPrompt(onClick) {
+        // simple inline button near the top of the card
+        const bar = document.createElement("div");
+        bar.style.display = "flex";
+        bar.style.justifyContent = "flex-start";
+        bar.style.alignItems = "center";
+        bar.style.gap = "10px";
+        bar.style.margin = "6px 0 8px";
+
+        const btn = document.createElement("button");
+        btn.className = "btn";
+        btn.type = "button";
+        btn.textContent = "▶ Play instruction";
+        btn.addEventListener(
+          "click",
+          () => {
+            onClick();
+            bar.remove();
+          },
+          { once: true }
+        );
+
+        // insert right under the progress bar
+        const anchor = document.querySelector("#seqbar");
+        anchor && anchor.parentNode && anchor.parentNode.insertBefore(bar, anchor.nextSibling);
+        bar.appendChild(btn);
+        return bar;
+      }
+
+      function startInstructionThenSequence(c1, c2, c3) {
+        let seqStarted = false;
+        const startSequenceOnce = () => {
+          if (seqStarted) return;
+          seqStarted = true;
+          playOne(c1, () =>
+            playOne(c2, () =>
+              playOne(c3, () => {
+                sequenceDone = true;
+              })
+            )
+          );
+        };
+
+        const file = idx === 0 ? instrFirst : instrNext;
+        const instr = trackMedia(new Audio(file));
+        instr.preload = "auto";
+        instr.muted = false;
+        instr.volume = 1;
+        instr.setAttribute?.("playsinline", "");
+        currentInstr = instr;
+
+        // Always wire advance listeners
+        instr.addEventListener("ended", startSequenceOnce, { once: true });
+        instr.addEventListener("error", startSequenceOnce, { once: true });
+
+        // Remove prompt as soon as playback begins (regardless of how it started)
+        let promptBar = null;
+        instr.addEventListener("play", () => {
+          audioUnlocked = true;
+          globalMuted = false;
+          if (promptBar) {
+            try {
+              promptBar.remove();
+            } catch {}
+            promptBar = null;
+          }
+        });
+
+        // Try autoplay with sound
+        instr.play().catch(() => {
+          // Autoplay blocked → build a small prompt
+          promptBar = document.createElement("div");
+          promptBar.style.display = "flex";
+          promptBar.style.alignItems = "center";
+          promptBar.style.gap = "10px";
+          promptBar.style.margin = "6px 0 8px";
+
+          const btn = document.createElement("button");
+          btn.className = "btn";
+          btn.type = "button";
+          btn.textContent = "▶ Play instruction";
+          btn.addEventListener(
+            "click",
+            () => {
+              // If it already started (because user tapped elsewhere), do nothing
+              if (!instr.paused || instr.ended) return;
+              instr.currentTime = 0;
+              instr.play().catch(() => {
+                // If still can’t play, don’t block the study
+                startSequenceOnce();
+              });
+            },
+            { once: true }
+          );
+
+          const anchor = document.querySelector("#seqbar");
+          anchor && anchor.parentNode && anchor.parentNode.insertBefore(promptBar, anchor.nextSibling);
+          promptBar.appendChild(btn);
+        });
+
+        // Long stall safety
+        setTimeout(startSequenceOnce, 15000);
+      }
+
+      async function saveTrialData(doc) {
+        if (!db) return; // no-op in dev if Firebase isn’t initialized
+        try {
+          const { collection, addDoc, serverTimestamp } = await import(
+            "https://www.gstatic.com/firebasejs/10.13.1/firebase-firestore.js"
+          );
+          await addDoc(collection(db, "responses"), { ...doc, createdAt: serverTimestamp() });
+        } catch (err) {
+          console.error("❌ Failed to save trial:", err);
+        }
+      }
+
+      /* ---------------- MISSING RUNTIME WIRING — paste this block at the end ---------------- */
+
+      // Build one trial on screen using current idx
+      function renderTrial() {
+        const T = TRIALS[idx];
+        renderSeqBar();
+
+        trialCounter.textContent = `Trial ${idx + 1} of ${TRIALS.length}`;
+        feedback.textContent = "";
+        submitBtn.disabled = true;
+        nextBtn.disabled = true;
+        selected = null;
+        sequenceDone = false;
+        currentInstr = null;
+        currentPlaying = null;
+        grid.innerHTML = "";
+
+        const [ev1, ev2, ev3] = T.choices;
+        const c1 = buildChoice(1, ev1);
+        const c2 = buildChoice(2, ev2);
+        const c3 = buildChoice(3, ev3);
+        grid.appendChild(c1.card);
+        grid.appendChild(c2.card);
+        grid.appendChild(c3.card);
+
+        setDisabled(c1.card);
+        setDisabled(c2.card);
+        setDisabled(c3.card);
+
+        // instruction then left → middle → right
+        startInstructionThenSequence(c1, c2, c3);
+      }
+
+      // Load trials JSON (relative path), or fall back if missing
+      async function loadTrials() {
+        const url = TRIALS_URL + `?v=${Date.now()}`;
+        try {
+          const res = await fetch(url, { cache: "no-store" });
+          if (!res.ok) throw new Error("trials json not found");
+          const data = await res.json();
+          if (!Array.isArray(data) || !data.length) throw new Error("bad trials json");
+          TRIALS = data;
+        } catch (e) {
+          console.warn("⚠️ Using fallback practice trials:", e.message || e);
+          TRIALS = [
+            { trial: 1, event_id: 1, choices: [3, 2, 1], correct: 3 },
+            { trial: 2, event_id: 2, choices: [2, 1, 3], correct: 1 },
+            { trial: 3, event_id: 3, choices: [1, 3, 2], correct: 2 }
+          ];
+        }
+      }
+
+      // Submit & Next handlers
+      submitBtn.addEventListener("click", async () => {
+        if (!sequenceDone || selected == null) return;
+        const T = TRIALS[idx];
+        const isCorrect = Number(selected) === Number(T.correct);
+
+        // text
+        feedback.textContent = isCorrect ? "✅ Correct!" : `❌ Incorrect. It was actually Option ${T.correct}.`;
+
+        submitBtn.disabled = true;
+        nextBtn.disabled = false;
+
+        const dots = seqbar.querySelectorAll(".seq-dot");
+        if (dots[idx]) dots[idx].classList.add("done");
+
+        // --- FIX: map correct position -> event id for the feedback clip
+        const correctEventId = Array.isArray(T.choices) ? T.choices[T.correct - 1] : null;
+        const clip = isCorrect ? "correct.mp3" : `gen_incorrect${correctEventId}.mp3`;
+        const fb = trackMedia(new Audio(fbPath(clip)));
+        fb.preload = "auto";
+        fb.muted = globalMuted;
+        fb.play().catch(() => {});
+
+        // (save to DB unchanged)
+        await saveTrialData({
+          participantId: localStorage.getItem("ct_id") || null,
+          age: Number(localStorage.getItem("ct_age")) || null,
+          session: Number(localStorage.getItem("ct_session")) || 1,
+          city: CITY,
+          eventId: "event_id" in T ? T.event_id : correctEventId, // keep both paths safe
+          trial: idx + 1,
+          correctOption: T.correct,
+          response: selected,
+          isCorrect
+        });
+      });
+
+      nextBtn.addEventListener("click", () => {
+        idx += 1;
+        if (idx >= TRIALS.length) {
+          window.location.href = "session_video.html?session=1";
+        } else {
+          renderTrial();
+        }
+      });
+
+      // First interaction → unmute everything (so Trial 1 has sound)
+      // Only unmute what is *currently* playing (instruction or a single option).
+      function enableAudioOnce() {
+        try {
+          audioUnlocked = true;
+          globalMuted = false;
+
+          if (currentInstr && !currentInstr.ended) {
+            currentInstr.muted = false;
+            currentInstr.volume = 1;
+            if (!isNaN(currentInstr.currentTime))
+              currentInstr.currentTime = Math.max(0, currentInstr.currentTime - 0.01);
+            currentInstr.play().catch(() => {});
+          } else if (currentPlaying) {
+            currentPlaying.muted = false;
+            currentPlaying.volume = 1;
+            if (!isNaN(currentPlaying.currentTime))
+              currentPlaying.currentTime = Math.max(0, currentPlaying.currentTime - 0.01);
+            currentPlaying.play().catch(() => {});
+          }
+        } catch {}
+
+        document.removeEventListener("click", enableAudioOnce);
+        document.removeEventListener("keydown", enableAudioOnce);
+        document.removeEventListener("pointerdown", enableAudioOnce);
+        document.removeEventListener("touchstart", enableAudioOnce);
+      }
+      document.addEventListener("click", enableAudioOnce, { once: true });
+      document.addEventListener("keydown", enableAudioOnce, { once: true });
+      document.addEventListener("pointerdown", enableAudioOnce, { once: true });
+      document.addEventListener("touchstart", enableAudioOnce, { once: true });
+
+      // Boot
+      (async () => {
+        await loadTrials();
+        renderTrial();
+      })();
+    </script>
+  </body>
 </html>

@@ -1,0 +1,119 @@
+[
+  {
+    "trial": 61,
+    "event_id": null,
+    "correct": 2,
+    "mediaType": "unknown",
+    "mediaCity": "City1",
+    "choices": [],
+    "assets": []
+  },
+  {
+    "trial": 65,
+    "event_id": 3,
+    "correct": 2,
+    "mediaType": "unknown",
+    "mediaCity": "City1",
+    "choices": [],
+    "assets": []
+  },
+  {
+    "trial": 67,
+    "event_id": 9,
+    "correct": 2,
+    "mediaType": "unknown",
+    "mediaCity": "City1",
+    "choices": [],
+    "assets": []
+  },
+  {
+    "trial": 72,
+    "event_id": 2,
+    "correct": 2,
+    "mediaType": "unknown",
+    "mediaCity": "City1",
+    "choices": [],
+    "assets": []
+  },
+  {
+    "trial": 75,
+    "event_id": 6,
+    "correct": 2,
+    "mediaType": "unknown",
+    "mediaCity": "City1",
+    "choices": [],
+    "assets": []
+  },
+  {
+    "trial": 79,
+    "event_id": 11,
+    "correct": 2,
+    "mediaType": "unknown",
+    "mediaCity": "City1",
+    "choices": [],
+    "assets": []
+  },
+  {
+    "trial": 83,
+    "event_id": 7,
+    "correct": 2,
+    "mediaType": "unknown",
+    "mediaCity": "City1",
+    "choices": [],
+    "assets": []
+  },
+  {
+    "trial": 85,
+    "event_id": 1,
+    "correct": 2,
+    "mediaType": "unknown",
+    "mediaCity": "City1",
+    "choices": [],
+    "assets": []
+  },
+  {
+    "trial": 88,
+    "event_id": 12,
+    "correct": 2,
+    "mediaType": "unknown",
+    "mediaCity": "City1",
+    "choices": [],
+    "assets": []
+  },
+  {
+    "trial": 91,
+    "event_id": 8,
+    "correct": 2,
+    "mediaType": "unknown",
+    "mediaCity": "City1",
+    "choices": [],
+    "assets": []
+  },
+  {
+    "trial": 92,
+    "event_id": 5,
+    "correct": 2,
+    "mediaType": "unknown",
+    "mediaCity": "City1",
+    "choices": [],
+    "assets": []
+  },
+  {
+    "trial": 95,
+    "event_id": 4,
+    "correct": 2,
+    "mediaType": "unknown",
+    "mediaCity": "City1",
+    "choices": [],
+    "assets": []
+  },
+  {
+    "trial": 97,
+    "event_id": 10,
+    "correct": 2,
+    "mediaType": "unknown",
+    "mediaCity": "City1",
+    "choices": [],
+    "assets": []
+  }
+]

@@ -1,0 +1,195 @@
+{
+  "generated": [
+    {
+      "session": "0",
+      "city": "City0",
+      "task": "gen",
+      "count": 3,
+      "files": [
+        "trials_0_City0_gen_v1.json",
+        "trials_0_City0_gen_v2.json"
+      ]
+    },
+    {
+      "session": "0",
+      "city": "City0",
+      "task": "ps",
+      "count": 3,
+      "files": [
+        "trials_0_City0_ps_v1.json",
+        "trials_0_City0_ps_v2.json"
+      ]
+    },
+    {
+      "session": "0",
+      "city": "City0",
+      "task": "pc",
+      "count": 3,
+      "files": [
+        "trials_0_City0_pc_v1.json",
+        "trials_0_City0_pc_v2.json"
+      ]
+    },
+    {
+      "session": "1",
+      "city": "City1",
+      "task": "gen",
+      "count": 12,
+      "files": [
+        "trials_1_City1_gen_v1.json",
+        "trials_1_City1_gen_v2.json"
+      ]
+    },
+    {
+      "session": "1",
+      "city": "City1",
+      "task": "pc",
+      "count": 12,
+      "files": [
+        "trials_1_City1_pc_v1.json",
+        "trials_1_City1_pc_v2.json"
+      ]
+    },
+    {
+      "session": "1",
+      "city": "City1",
+      "task": "ps",
+      "count": 12,
+      "files": [
+        "trials_1_City1_ps_v1.json",
+        "trials_1_City1_ps_v2.json"
+      ]
+    },
+    {
+      "session": "2",
+      "city": "City2",
+      "task": "gen",
+      "count": 12,
+      "files": [
+        "trials_2_City2_gen_v1.json",
+        "trials_2_City2_gen_v2.json"
+      ]
+    },
+    {
+      "session": "2",
+      "city": "City2",
+      "task": "pc",
+      "count": 12,
+      "files": [
+        "trials_2_City2_pc_v1.json",
+        "trials_2_City2_pc_v2.json"
+      ]
+    },
+    {
+      "session": "2",
+      "city": "City2",
+      "task": "ps",
+      "count": 12,
+      "files": [
+        "trials_2_City2_ps_v1.json",
+        "trials_2_City2_ps_v2.json"
+      ]
+    },
+    {
+      "session": "3",
+      "city": "City3",
+      "task": "gen",
+      "count": 12,
+      "files": [
+        "trials_3_City3_gen_v1.json",
+        "trials_3_City3_gen_v2.json"
+      ]
+    },
+    {
+      "session": "3",
+      "city": "City3",
+      "task": "pc",
+      "count": 12,
+      "files": [
+        "trials_3_City3_pc_v1.json",
+        "trials_3_City3_pc_v2.json"
+      ]
+    },
+    {
+      "session": "3",
+      "city": "City3",
+      "task": "ps",
+      "count": 12,
+      "files": [
+        "trials_3_City3_ps_v1.json",
+        "trials_3_City3_ps_v2.json"
+      ]
+    },
+    {
+      "session": "3",
+      "city": "City1",
+      "task": "ps",
+      "count": 12,
+      "files": [
+        "trials_3_City1_ps_v1.json",
+        "trials_3_City1_ps_v2.json"
+      ]
+    },
+    {
+      "session": "3",
+      "city": "City2",
+      "task": "ps",
+      "count": 12,
+      "files": [
+        "trials_3_City2_ps_v1.json",
+        "trials_3_City2_ps_v2.json"
+      ]
+    },
+    {
+      "session": "3",
+      "city": "City1",
+      "task": "citysorting",
+      "count": 13,
+      "files": [
+        "trials_3_City1_citysorting_v1.json",
+        "trials_3_City1_citysorting_v2.json"
+      ]
+    },
+    {
+      "session": "3",
+      "city": "City2",
+      "task": "citysorting",
+      "count": 13,
+      "files": [
+        "trials_3_City2_citysorting_v1.json",
+        "trials_3_City2_citysorting_v2.json"
+      ]
+    },
+    {
+      "session": "3",
+      "city": "City3",
+      "task": "citysorting",
+      "count": 13,
+      "files": [
+        "trials_3_City3_citysorting_v1.json",
+        "trials_3_City3_citysorting_v2.json"
+      ]
+    },
+    {
+      "session": "3",
+      "city": "City1",
+      "task": "pc",
+      "count": 12,
+      "files": [
+        "trials_3_City1_pc_v1.json",
+        "trials_3_City1_pc_v2.json"
+      ]
+    },
+    {
+      "session": "3",
+      "city": "City2",
+      "task": "pc",
+      "count": 12,
+      "files": [
+        "trials_3_City2_pc_v1.json",
+        "trials_3_City2_pc_v2.json"
+      ]
+    }
+  ],
+  "created_at": "2025-10-16T16:38:33.680247Z"
+}

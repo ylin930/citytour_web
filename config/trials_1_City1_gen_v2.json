@@ -1,0 +1,206 @@
+[
+  {
+    "trial": 7,
+    "event_id": 7,
+    "correct": 1,
+    "mediaType": "video",
+    "mediaCity": "City4",
+    "choices": [
+      7,
+      10,
+      8
+    ],
+    "assets": [
+      "media/City4/animations/{lang}/7.mp4",
+      "media/City4/animations/{lang}/10.mp4",
+      "media/City4/animations/{lang}/8.mp4"
+    ]
+  },
+  {
+    "trial": 8,
+    "event_id": 8,
+    "correct": 2,
+    "mediaType": "video",
+    "mediaCity": "City4",
+    "choices": [
+      10,
+      8,
+      7
+    ],
+    "assets": [
+      "media/City4/animations/{lang}/10.mp4",
+      "media/City4/animations/{lang}/8.mp4",
+      "media/City4/animations/{lang}/7.mp4"
+    ]
+  },
+  {
+    "trial": 9,
+    "event_id": 9,
+    "correct": 1,
+    "mediaType": "video",
+    "mediaCity": "City4",
+    "choices": [
+      9,
+      11,
+      12
+    ],
+    "assets": [
+      "media/City4/animations/{lang}/9.mp4",
+      "media/City4/animations/{lang}/11.mp4",
+      "media/City4/animations/{lang}/12.mp4"
+    ]
+  },
+  {
+    "trial": 10,
+    "event_id": 10,
+    "correct": 3,
+    "mediaType": "video",
+    "mediaCity": "City4",
+    "choices": [
+      8,
+      7,
+      10
+    ],
+    "assets": [
+      "media/City4/animations/{lang}/8.mp4",
+      "media/City4/animations/{lang}/7.mp4",
+      "media/City4/animations/{lang}/10.mp4"
+    ]
+  },
+  {
+    "trial": 11,
+    "event_id": 11,
+    "correct": 3,
+    "mediaType": "video",
+    "mediaCity": "City4",
+    "choices": [
+      12,
+      9,
+      11
+    ],
+    "assets": [
+      "media/City4/animations/{lang}/12.mp4",
+      "media/City4/animations/{lang}/9.mp4",
+      "media/City4/animations/{lang}/11.mp4"
+    ]
+  },
+  {
+    "trial": 12,
+    "event_id": 12,
+    "correct": 2,
+    "mediaType": "video",
+    "mediaCity": "City4",
+    "choices": [
+      11,
+      12,
+      9
+    ],
+    "assets": [
+      "media/City4/animations/{lang}/11.mp4",
+      "media/City4/animations/{lang}/12.mp4",
+      "media/City4/animations/{lang}/9.mp4"
+    ]
+  },
+  {
+    "trial": 1,
+    "event_id": 1,
+    "correct": 2,
+    "mediaType": "video",
+    "mediaCity": "City4",
+    "choices": [
+      2,
+      1,
+      4
+    ],
+    "assets": [
+      "media/City4/animations/{lang}/2.mp4",
+      "media/City4/animations/{lang}/1.mp4",
+      "media/City4/animations/{lang}/4.mp4"
+    ]
+  },
+  {
+    "trial": 2,
+    "event_id": 2,
+    "correct": 3,
+    "mediaType": "video",
+    "mediaCity": "City4",
+    "choices": [
+      1,
+      4,
+      2
+    ],
+    "assets": [
+      "media/City4/animations/{lang}/1.mp4",
+      "media/City4/animations/{lang}/4.mp4",
+      "media/City4/animations/{lang}/2.mp4"
+    ]
+  },
+  {
+    "trial": 3,
+    "event_id": 3,
+    "correct": 2,
+    "mediaType": "video",
+    "mediaCity": "City4",
+    "choices": [
+      5,
+      3,
+      6
+    ],
+    "assets": [
+      "media/City4/animations/{lang}/5.mp4",
+      "media/City4/animations/{lang}/3.mp4",
+      "media/City4/animations/{lang}/6.mp4"
+    ]
+  },
+  {
+    "trial": 4,
+    "event_id": 4,
+    "correct": 1,
+    "mediaType": "video",
+    "mediaCity": "City4",
+    "choices": [
+      4,
+      2,
+      1
+    ],
+    "assets": [
+      "media/City4/animations/{lang}/4.mp4",
+      "media/City4/animations/{lang}/2.mp4",
+      "media/City4/animations/{lang}/1.mp4"
+    ]
+  },
+  {
+    "trial": 5,
+    "event_id": 5,
+    "correct": 3,
+    "mediaType": "video",
+    "mediaCity": "City4",
+    "choices": [
+      3,
+      6,
+      5
+    ],
+    "assets": [
+      "media/City4/animations/{lang}/3.mp4",
+      "media/City4/animations/{lang}/6.mp4",
+      "media/City4/animations/{lang}/5.mp4"
+    ]
+  },
+  {
+    "trial": 6,
+    "event_id": 6,
+    "correct": 1,
+    "mediaType": "video",
+    "mediaCity": "City4",
+    "choices": [
+      6,
+      5,
+      3
+    ],
+    "assets": [
+      "media/City4/animations/{lang}/6.mp4",
+      "media/City4/animations/{lang}/5.mp4",
+      "media/City4/animations/{lang}/3.mp4"
+    ]
+  }
+]
