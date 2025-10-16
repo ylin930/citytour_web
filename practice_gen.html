@@ -1,0 +1,79 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>City 0 – Generator Overview</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <main class="container">
+      <header class="header">
+        <div>
+          <div class="badge">CITY 0 • PRACTICE</div>
+          <!--<div class="h1">How the generator works</div>-->
+          <!--<div class="sub">Please listen carefully. Click Next to begin.</div>-->
+        </div>
+      </header>
+
+      <section class="grid">
+        <div class="card" style="display: flex; flex-direction: column; gap: 16px; align-items: center">
+          <audio id="overviewAudio" preload="auto">
+            <source src="media/City0/audio/en/instructions/gen_intro.mp3" type="audio/mpeg" />
+          </audio>
+          <button id="playAudio" class="btn" type="button" style="display: none">▶ Tap to start audio</button>
+
+          <div
+            class="two-col"
+            style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; max-width: 960px; width: 100%">
+            <img
+              src="media/City0/images/guide.png"
+              alt="Guide diagram"
+              style="width: 100%; border-radius: 12px; box-shadow: 0 6px 18px rgba(0, 0, 0, 0.12)" />
+            <img
+              src="media/City0/images/gen.png"
+              alt="Generator diagram"
+              style="width: 100%; border-radius: 12px; box-shadow: 0 6px 18px rgba(0, 0, 0, 0.12)" />
+          </div>
+
+          <div class="buttons" style="width: 100%; justify-content: flex-end">
+            <button class="btn" type="button" onclick="history.back()">Back</button>
+            <button id="nextBtn" class="btn primary" disabled>Next</button>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <script>
+  const audio = document.getElementById('overviewAudio');
+  const playBtn = document.getElementById('playAudio');
+  const nextBtn = document.getElementById('nextBtn');
+
+  // Enable Next (used on end or on error)
+  function enableNext() {
+    if (nextBtn) nextBtn.disabled = false;
+  }
+
+  // If autoplay is blocked, show button; also allow any page tap to start once
+  function showPlayUI() {
+    if (playBtn) playBtn.style.display = 'inline-flex';
+    const tryStart = () => { audio.play().catch(()=>{}); };
+    playBtn && playBtn.addEventListener('click', tryStart, { once: true });
+    document.addEventListener('click', tryStart, { once: true });
+    document.addEventListener('touchend', tryStart, { once: true });
+  }
+
+  // Core wiring
+  audio.addEventListener('ended', enableNext);
+  audio.addEventListener('error', enableNext);
+
+  // Try to autoplay on load; if blocked, reveal fallback UI
+  audio.load();
+  audio.play().catch(() => {
+    showPlayUI();
+  });
+</script>
+
+    <script src="js/dev-tools.js"></script>
+  </body>
+</html>

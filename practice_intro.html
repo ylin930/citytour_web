@@ -1,7 +1,6 @@
 <!doctype html>
 <html lang="en">
 <head>
-    <meta name="ct-next" content="practice_task.html">
   <meta charset="utf-8" />
   <title>City Tour – Practice Intro</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
@@ -29,14 +28,18 @@
         <div class="sub">Watch this quick intro. “Next” unlocks when it ends.</div>
       </div>
     </header>
+    <audio id="prerollAudio" preload="auto">
+      <source src="media/City0/audio/en/instructions/intro.mp3" type="audio/mpeg" />
+    </audio>
+    
 
     <section class="grid">
       <div class="card" style="display:flex;flex-direction:column;gap:14px;align-items:center">
         <div class="video-wrap">
           <video id="vid" autoplay muted playsinline preload="auto"
-                 poster="media/city0/city_intro.jpg"
+                 poster="/media/city0/city_intro.jpg"
                  controlslist="nodownload noplaybackrate nofullscreen" disablepictureinpicture>
-            <source src="media/city0/animations/en/city_intro.mp4" type="video/mp4" />
+            <source src="/media/city0/city_intro.mp4" type="video/mp4" />
           </video>
           <div id="loading" class="loading">Loading…</div>
           <div id="unmuteBtn" class="hidden">🔊 Unmute</div>
@@ -66,6 +69,23 @@
     v.addEventListener("ended", ()=> nextBtn.disabled = false);
     nextBtn.addEventListener("click", ()=> location.href = "practice_task.html");
   </script>
-  <script src="js/dev-tools.js"></script>
+
+<script>
+  const audio = document.getElementById('prerollAudio');
+  const nextBtn = document.getElementById('nextBtn') || document.querySelector('.btn.primary');
+  const vid = document.querySelector('video');
+  function enableProgress() {
+    if (nextBtn) nextBtn.disabled = false;
+    if (vid && vid.paused) { try { vid.play(); } catch(e) {} }
+  }
+  if (audio) {
+    audio.play().catch(()=>{});
+    audio.addEventListener('ended', enableProgress);
+    audio.addEventListener('error', enableProgress);
+  } else {
+    enableProgress();
+  }
+</script>
+<script src="js/dev-tools.js"></script>
 </body>
 </html>
