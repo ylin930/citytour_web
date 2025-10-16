@@ -1,182 +1,379 @@
 <!doctype html>
 <html lang="en">
-<head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Place Choice Task</title>
-  <link rel="stylesheet" href="styles.css" />
-  <style>
-    .choice-grid{display:grid;grid-template-columns:repeat(3,minmax(240px,1fr));gap:16px}
-    .choice{display:flex;flex-direction:column;border-radius:14px;border:2px solid transparent;background:#fff;box-shadow:0 6px 16px rgba(0,0,0,.08);overflow:hidden}
-    .media-wrap{position:relative;width:100%;height:260px;background:#000;overflow:hidden}
-    .label{text-align:center;padding:10px 8px;font-weight:600}
-    .choice.disabled{filter:grayscale(100%);opacity:.55;pointer-events:none}
-    .choice.playing{border-color:#a3bffa;opacity:1}
-    .choice.ready{filter:none;opacity:1;pointer-events:auto}
-    .choice.selected{border-color:#2563eb;box-shadow:0 8px 20px rgba(37,99,235,.25)}
-    .seqbar{display:flex;align-items:center;gap:10px;margin:6px 0 14px}
-    .seq-dot{width:38px;height:38px;border-radius:10px;border:2px dashed #bbb;display:grid;place-items:center;color:#777;font-weight:700}
-    .seq-dot.active{border-style:solid;border-color:#2563eb;color:#2563eb}
-    .seq-dot.done{border-style:solid;border-color:#16a34a;background:#eafff2;color:#0f5132}
-  </style>
-</head>
-<body>
-  <main class="container">
-    <header class="header">
-      <div>
-        <div class="badge" id="badge">PC</div>
-        <div class="h1">Pick the matching animation</div>
-        <div class="sub">Watch each option left → middle → right, then choose.</div>
-      </div>
-    </header>
+    <head>
+        <meta charset="utf-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+        <title>Place Choice Task</title>
+        <link rel="stylesheet" href="styles.css" />
+        <style>
+            .choice-grid {
+                display: grid;
+                grid-template-columns: repeat(3, minmax(240px, 1fr));
+                gap: 16px;
+            }
+            .choice {
+                display: flex;
+                flex-direction: column;
+                border-radius: 14px;
+                border: 2px solid transparent;
+                background: #fff;
+                box-shadow: 0 6px 16px rgba(0, 0, 0, 0.08);
+                overflow: hidden;
+            }
+            .media-wrap {
+                position: relative;
+                width: 100%;
+                height: 260px;
+                background: #000;
+                overflow: hidden;
+            }
+            .label {
+                text-align: center;
+                padding: 10px 8px;
+                font-weight: 600;
+            }
+            .choice.disabled {
+                filter: grayscale(100%);
+                opacity: 0.55;
+                pointer-events: none;
+            }
+            .choice.playing {
+                border-color: #a3bffa;
+                opacity: 1;
+            }
+            .choice.ready {
+                filter: none;
+                opacity: 1;
+                pointer-events: auto;
+            }
+            .choice.selected {
+                border-color: #2563eb;
+                box-shadow: 0 8px 20px rgba(37, 99, 235, 0.25);
+            }
+            .seqbar {
+                display: flex;
+                align-items: center;
+                gap: 10px;
+                margin: 6px 0 14px;
+            }
+            .seq-dot {
+                width: 38px;
+                height: 38px;
+                border-radius: 10px;
+                border: 2px dashed #bbb;
+                display: grid;
+                place-items: center;
+                color: #777;
+                font-weight: 700;
+            }
+            .seq-dot.active {
+                border-style: solid;
+                border-color: #2563eb;
+                color: #2563eb;
+            }
+            .seq-dot.done {
+                border-style: solid;
+                border-color: #16a34a;
+                background: #eafff2;
+                color: #0f5132;
+            }
+        </style>
+    </head>
+    <body>
+        <main class="container">
+            <header class="header">
+                <div>
+                    <div class="badge" id="badge">PC</div>
+                    <div class="h1">Pick the matching animation</div>
+                    <div class="sub">Watch each option left → middle → right, then choose.</div>
+                </div>
+            </header>
 
-    <section class="grid">
-      <div class="card" style="display:flex;flex-direction:column;gap:14px">
-        <div id="seqbar" class="seqbar"></div>
-        <div id="trialCounter" class="muted">Trial 1</div>
-        <div id="choices" class="choice-grid"></div>
-        <div style="display:flex;justify-content:space-between;gap:10px">
-          <button class="btn" type="button" onclick="history.back()">Back</button>
-          <div style="display:flex;gap:10px">
-            <button id="submitBtn" class="btn primary" disabled>Submit</button>
-            <button id="nextBtn" class="btn" disabled>Next</button>
-          </div>
-        </div>
-        <div id="feedback" class="muted"></div>
-      </div>
-    </section>
-  </main>
+            <section class="grid">
+                <div class="card" style="display: flex; flex-direction: column; gap: 14px">
+                    <div id="seqbar" class="seqbar"></div>
+                    <div id="trialCounter" class="muted">Trial 1</div>
+                    <div id="choices" class="choice-grid"></div>
+                    <div style="display: flex; justify-content: space-between; gap: 10px">
+                        <button class="btn" type="button" onclick="history.back()">Back</button>
+                        <div style="display: flex; gap: 10px">
+                            <button id="submitBtn" class="btn primary" disabled>Submit</button>
+                            <button id="nextBtn" class="btn" disabled>Next</button>
+                        </div>
+                    </div>
+                    <div id="feedback" class="muted"></div>
+                </div>
+            </section>
+        </main>
 
-  <script type="module">
-    const qs = new URLSearchParams(location.search);
-    const session = qs.get('session') || 'S1';
-    const city    = qs.get('city')    || 'City1';
-    const v       = qs.get('v')       || '1';
-    const task    = 'pc';
-    const lang    = (localStorage.getItem('ct_language') || 'EN').toLowerCase();
-    const trialsURL = qs.get('trials') || `config/trials_${session}_${city}_${task}_v${v}.json`;
-    const nextURL   = qs.get('next')   || `session_video.html?session=${encodeURIComponent(session)}`;
+        <script type="module">
+            /* ---------- Params / paths ---------- */
+            const qs = new URLSearchParams(location.search);
 
-    const instrFirst = (c)=>`media/${c}/audio/${lang}/instructions/pc_first.mp3`;
-    const instrNext  = (c)=>`media/${c}/audio/${lang}/instructions/pc_next.mp3`;
-    const fbPath     = (c,name)=>`media/${c}/audio/${lang}/feedback/${name}`;
+            // normalize City and Session values (handles 0, 1, 2, etc)
+            function canonCity(v) {
+                const s = String(v ?? "City0").trim();
+                const m = s.match(/(\d+)/);
+                return `City${m ? parseInt(m[1], 10) : 0}`;
+            }
 
-    const grid = document.getElementById('choices');
-    const trialCounter = document.getElementById('trialCounter');
-    const submitBtn = document.getElementById('submitBtn');
-    const nextBtn = document.getElementById('nextBtn');
-    const feedback = document.getElementById('feedback');
-    const seqbar = document.getElementById('seqbar');
-    document.getElementById('badge').textContent = `PC • ${city} • ${session} v${v}`;
+            function canonSession(v) {
+                const s = String(v ?? "0").trim();
+                const m = s.match(/(\d+)/);
+                return `${m ? parseInt(m[1], 10) : 0}`;
+            }
 
-    let TRIALS = [];
-    let idx = 0, selected = null, sequenceDone = false;
-    let audioUnlocked = false;
-    let currentInstr = null, currentPlaying = null;
+            // page task type (from HTML body tag)
+            const TASK = (document.body.dataset.task || "gen").toLowerCase();
 
-    const setDisabled = el => { el.classList.remove('playing','ready'); el.classList.add('disabled'); };
-    const setPlaying  = el => { el.classList.remove('disabled','ready'); el.classList.add('playing'); };
-    const setReady    = el => { el.classList.remove('disabled','playing'); el.classList.add('ready'); };
-    function replaceLang(s){ return (s||'').replace('{lang}', lang); }
+            const session = canonSession(qs.get("session")); // → "0", "1", "2", "3"
+            const city = canonCity(qs.get("city")); // → "City0", "City1", etc.
+            const v = String(qs.get("v") || "1"); // version number
+            const lang = (localStorage.getItem("ct_language") || "EN").toLowerCase();
 
-    function renderSeqBar(){
-      seqbar.innerHTML='';
-      for(let i=0;i<TRIALS.length;i++){
-        const dot=document.createElement('div');
-        dot.className='seq-dot'+(i===idx?' active':i<idx?' done':'');
-        dot.textContent=i+1; seqbar.appendChild(dot);
-      }
-    }
+            // build the proper config filename
+            const trialsURL = qs.get("trials") || `config/trials_${session}_${city}_${TASK}_v${v}.json`;
 
-    function buildChoice(position, videoUrl){
-      const card=document.createElement('div'); card.className='choice disabled';
-      const wrap=document.createElement('div'); wrap.className='media-wrap';
-      const vid=document.createElement('video'); vid.playsInline=true; vid.preload='auto'; vid.muted=!audioUnlocked;
-      vid.style.width='100%'; vid.style.height='100%'; vid.style.objectFit='cover';
-      const src=document.createElement('source'); src.src=replaceLang(videoUrl); src.type='video/mp4';
-      vid.appendChild(src); wrap.appendChild(vid);
-      const label=document.createElement('div'); label.className='label'; label.textContent=`Option ${position}`;
-      card.appendChild(wrap); card.appendChild(label);
-      card.addEventListener('click',()=>{ if(!sequenceDone)return; document.querySelectorAll('.choice').forEach(el=>el.classList.remove('selected')); card.classList.add('selected'); selected=position; submitBtn.disabled=false; });
-      return {card,vid};
-    }
+            // where to go after finishing this block
+            const nextURL = qs.get("next") || `session_video.html?session=${encodeURIComponent(session)}`;
 
-    function playOne(holder,onEnd){
-      const vEl=holder.vid; vEl.muted=!audioUnlocked;
-      try{ vEl.currentTime=0; }catch{}
-      vEl.load(); setPlaying(holder.card); currentPlaying=vEl;
-      const start=()=> vEl.paused && vEl.play().catch(()=>{});
-      vEl.addEventListener('canplay',start,{once:true});
-      vEl.addEventListener('ended',()=>{ setReady(holder.card); currentPlaying=null; onEnd&&onEnd(); },{once:true});
-      vEl.addEventListener('error',()=>{ setReady(holder.card); currentPlaying=null; onEnd&&onEnd(); },{once:true});
-      start();
-    }
+            // file path helpers
+            const instrFirst = (c) => `media/${c}/audio/${lang}/instructions/${TASK}_first.mp3`;
+            const instrNext = (c) => `media/${c}/audio/${lang}/instructions/${TASK}_next.mp3`;
+            const fbPath = (c, name) => `media/${c}/audio/${lang}/feedback/${name}`;
+            const animPath = (n) => `media/${city}/animations/${lang}/${n}.mp4`;
 
-    function startInstructionThenSequence(mediaCity,c1,c2,c3){
-      let seqStarted=false;
-      const startSequenceOnce=()=>{ if(seqStarted)return; seqStarted=true; playOne(c1,()=>playOne(c2,()=>playOne(c3,()=>{sequenceDone=true;}))); };
-      const file=(idx===0)?instrFirst(mediaCity):instrNext(mediaCity);
-      const instr=new Audio(file); currentInstr=instr;
-      instr.preload='auto'; instr.muted=false; instr.volume=1;
-      instr.addEventListener('ended',startSequenceOnce,{once:true});
-      instr.addEventListener('error',startSequenceOnce,{once:true});
-      instr.addEventListener('play',()=>{ audioUnlocked=true; },{once:true});
-      instr.play().catch(()=>{
-        const bar=document.createElement('div'); bar.style.margin='6px 0 8px';
-        const btn=document.createElement('button'); btn.className='btn'; btn.type='button'; btn.textContent='▶ Play instruction';
-        btn.addEventListener('click',()=>{ instr.currentTime=0; instr.play().then(()=>{ bar.remove(); }).catch(()=>{ bar.remove(); startSequenceOnce(); }); },{once:true});
-        seqbar.parentNode.insertBefore(bar, seqbar.nextSibling); bar.appendChild(btn);
-      });
-      setTimeout(startSequenceOnce,15000);
-    }
+            // ---------- State / DOM ----------
+            const grid = document.getElementById("choices");
+            const trialCounter = document.getElementById("trialCounter");
+            const submitBtn = document.getElementById("submitBtn");
+            const nextBtn = document.getElementById("nextBtn");
+            const feedback = document.getElementById("feedback");
+            const seqbar = document.getElementById("seqbar");
+            document.getElementById("badge").textContent = `${TASK.toUpperCase()} • ${city} • S${session} v${v}`;
 
-    function correctEventIdFor(T){ return Array.isArray(T.choices) ? T.choices[T.correct-1] : null; }
+            let TRIALS = [];
+            let idx = 0,
+                selected = null,
+                sequenceDone = false;
+            let audioUnlocked = false;
+            let currentInstr = null,
+                currentPlaying = null;
 
-    function renderTrial(){
-      const T=TRIALS[idx];
-      renderSeqBar();
-      trialCounter.textContent=`Trial ${idx+1} of ${TRIALS.length}`;
-      feedback.textContent=''; submitBtn.disabled=true; nextBtn.disabled=true; selected=null; sequenceDone=false; grid.innerHTML='';
+            const setDisabled = (el) => {
+                el.classList.remove("playing", "ready");
+                el.classList.add("disabled");
+            };
+            const setPlaying = (el) => {
+                el.classList.remove("disabled", "ready");
+                el.classList.add("playing");
+            };
+            const setReady = (el) => {
+                el.classList.remove("disabled", "playing");
+                el.classList.add("ready");
+            };
+            function replaceLang(s) {
+                return (s || "").replace("{lang}", lang);
+            }
 
-      const [u1,u2,u3]=T.assets;
-      const c1=buildChoice(1,u1), c2=buildChoice(2,u2), c3=buildChoice(3,u3);
-      grid.appendChild(c1.card); grid.appendChild(c2.card); grid.appendChild(c3.card);
-      setDisabled(c1.card); setDisabled(c2.card); setDisabled(c3.card);
+            function renderSeqBar() {
+                seqbar.innerHTML = "";
+                for (let i = 0; i < TRIALS.length; i++) {
+                    const dot = document.createElement("div");
+                    dot.className = "seq-dot" + (i === idx ? " active" : i < idx ? " done" : "");
+                    dot.textContent = i + 1;
+                    seqbar.appendChild(dot);
+                }
+            }
 
-      startInstructionThenSequence(T.mediaCity, c1,c2,c3);
-    }
+            function buildChoice(position, videoUrl) {
+                const card = document.createElement("div");
+                card.className = "choice disabled";
+                const wrap = document.createElement("div");
+                wrap.className = "media-wrap";
+                const vid = document.createElement("video");
+                vid.playsInline = true;
+                vid.preload = "auto";
+                vid.muted = !audioUnlocked;
+                vid.style.width = "100%";
+                vid.style.height = "100%";
+                vid.style.objectFit = "cover";
+                const src = document.createElement("source");
+                src.src = replaceLang(videoUrl);
+                src.type = "video/mp4";
+                vid.appendChild(src);
+                wrap.appendChild(vid);
+                const label = document.createElement("div");
+                label.className = "label";
+                label.textContent = `Option ${position}`;
+                card.appendChild(wrap);
+                card.appendChild(label);
+                card.addEventListener("click", () => {
+                    if (!sequenceDone) return;
+                    document.querySelectorAll(".choice").forEach((el) => el.classList.remove("selected"));
+                    card.classList.add("selected");
+                    selected = position;
+                    submitBtn.disabled = false;
+                });
+                return { card, vid };
+            }
 
-    submitBtn.addEventListener('click', ()=>{
-      if(!sequenceDone || selected==null) return;
-      const T=TRIALS[idx];
-      const isCorrect=(selected===Number(T.correct));
-      feedback.textContent = isCorrect ? '✅ Correct!' : `❌ Incorrect. It was Option ${T.correct}.`;
-      submitBtn.disabled=true; nextBtn.disabled=false;
-      // Optional feedback (pc_correct / pc_incorrect{eventId}) — safe to try/catch
-      const corrEvent = correctEventIdFor(T);
-      const clip = isCorrect ? 'correct.mp3' : `pc_incorrect${corrEvent}.mp3`;
-      const url  = `media/${T.mediaCity}/audio/${lang}/feedback/${clip}`;
-      const a = new Audio(url); a.muted=!audioUnlocked; a.play().catch(()=>{});
-      const dots=seqbar.querySelectorAll('.seq-dot'); if(dots[idx]) dots[idx].classList.add('done');
-    });
+            function playOne(holder, onEnd) {
+                const vEl = holder.vid;
+                vEl.muted = !audioUnlocked;
+                try {
+                    vEl.currentTime = 0;
+                } catch {}
+                vEl.load();
+                setPlaying(holder.card);
+                currentPlaying = vEl;
+                const start = () => vEl.paused && vEl.play().catch(() => {});
+                vEl.addEventListener("canplay", start, { once: true });
+                vEl.addEventListener(
+                    "ended",
+                    () => {
+                        setReady(holder.card);
+                        currentPlaying = null;
+                        onEnd && onEnd();
+                    },
+                    { once: true }
+                );
+                vEl.addEventListener(
+                    "error",
+                    () => {
+                        setReady(holder.card);
+                        currentPlaying = null;
+                        onEnd && onEnd();
+                    },
+                    { once: true }
+                );
+                start();
+            }
 
-    nextBtn.addEventListener('click', ()=>{
-      idx += 1;
-      if(idx >= TRIALS.length){
-        location.assign(nextURL);
-      } else {
-        renderTrial();
-      }
-    });
+            function startInstructionThenSequence(mediaCity, c1, c2, c3) {
+                let seqStarted = false;
+                const startSequenceOnce = () => {
+                    if (seqStarted) return;
+                    seqStarted = true;
+                    playOne(c1, () =>
+                        playOne(c2, () =>
+                            playOne(c3, () => {
+                                sequenceDone = true;
+                            })
+                        )
+                    );
+                };
+                const file = idx === 0 ? instrFirst(mediaCity) : instrNext(mediaCity);
+                const instr = new Audio(file);
+                currentInstr = instr;
+                instr.preload = "auto";
+                instr.muted = false;
+                instr.volume = 1;
+                instr.addEventListener("ended", startSequenceOnce, { once: true });
+                instr.addEventListener("error", startSequenceOnce, { once: true });
+                instr.addEventListener(
+                    "play",
+                    () => {
+                        audioUnlocked = true;
+                    },
+                    { once: true }
+                );
+                instr.play().catch(() => {
+                    const bar = document.createElement("div");
+                    bar.style.margin = "6px 0 8px";
+                    const btn = document.createElement("button");
+                    btn.className = "btn";
+                    btn.type = "button";
+                    btn.textContent = "▶ Play instruction";
+                    btn.addEventListener(
+                        "click",
+                        () => {
+                            instr.currentTime = 0;
+                            instr
+                                .play()
+                                .then(() => {
+                                    bar.remove();
+                                })
+                                .catch(() => {
+                                    bar.remove();
+                                    startSequenceOnce();
+                                });
+                        },
+                        { once: true }
+                    );
+                    seqbar.parentNode.insertBefore(bar, seqbar.nextSibling);
+                    bar.appendChild(btn);
+                });
+                setTimeout(startSequenceOnce, 15000);
+            }
 
-    fetch(trialsURL).then(r=>r.json()).then(data=>{
-      TRIALS = Array.isArray(data)? data : [];
-      if(!TRIALS.length) throw new Error('No trials');
-      renderTrial();
-    }).catch(err=>{
-      feedback.textContent='Could not load trials.';
-      console.error(err);
-    });
-  </script>
-</body>
+            function correctEventIdFor(T) {
+                return Array.isArray(T.choices) ? T.choices[T.correct - 1] : null;
+            }
+
+            function renderTrial() {
+                const T = TRIALS[idx];
+                renderSeqBar();
+                trialCounter.textContent = `Trial ${idx + 1} of ${TRIALS.length}`;
+                feedback.textContent = "";
+                submitBtn.disabled = true;
+                nextBtn.disabled = true;
+                selected = null;
+                sequenceDone = false;
+                grid.innerHTML = "";
+
+                const [u1, u2, u3] = T.assets;
+                const c1 = buildChoice(1, u1),
+                    c2 = buildChoice(2, u2),
+                    c3 = buildChoice(3, u3);
+                grid.appendChild(c1.card);
+                grid.appendChild(c2.card);
+                grid.appendChild(c3.card);
+                setDisabled(c1.card);
+                setDisabled(c2.card);
+                setDisabled(c3.card);
+
+                startInstructionThenSequence(T.mediaCity, c1, c2, c3);
+            }
+
+            submitBtn.addEventListener("click", () => {
+                if (!sequenceDone || selected == null) return;
+                const T = TRIALS[idx];
+                const isCorrect = selected === Number(T.correct);
+                feedback.textContent = isCorrect ? "✅ Correct!" : `❌ Incorrect. It was Option ${T.correct}.`;
+                submitBtn.disabled = true;
+                nextBtn.disabled = false;
+                // Optional feedback (pc_correct / pc_incorrect{eventId}) — safe to try/catch
+                const corrEvent = correctEventIdFor(T);
+                const clip = isCorrect ? "correct.mp3" : `pc_incorrect${corrEvent}.mp3`;
+                const url = `media/${T.mediaCity}/audio/${lang}/feedback/${clip}`;
+                const a = new Audio(url);
+                a.muted = !audioUnlocked;
+                a.play().catch(() => {});
+                const dots = seqbar.querySelectorAll(".seq-dot");
+                if (dots[idx]) dots[idx].classList.add("done");
+            });
+
+            nextBtn.addEventListener("click", () => {
+                idx += 1;
+                if (idx >= TRIALS.length) {
+                    location.assign(nextURL);
+                } else {
+                    renderTrial();
+                }
+            });
+
+            fetch(trialsURL)
+                .then((r) => r.json())
+                .then((data) => {
+                    TRIALS = Array.isArray(data) ? data : [];
+                    if (!TRIALS.length) throw new Error("No trials");
+                    renderTrial();
+                })
+                .catch((err) => {
+                    feedback.textContent = "Could not load trials.";
+                    console.error(err);
+                });
+        </script>
+    </body>
 </html>
