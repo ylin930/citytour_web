@@ -5,42 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>PS</title>
     <link rel="stylesheet" href="styles.css" />
-    <style>
-      [hidden] {
-        display: none !important;
-      }
-      .choice-grid {
-        display: grid;
-        grid-template-columns: repeat(3, minmax(220px, 1fr));
-        gap: 16px;
-      }
-      
-      .choice {
-        display: flex;
-        flex-direction: column;
-        border-radius: 14px;
-        border: 2px solid transparent;
-        background: #fff;
-        box-shadow: 0 6px 16px rgba(0, 0, 0, 0.08);
-        overflow: hidden;
-      }
-      .choice img {
-        width: 100%;
-        height: 260px;
-        object-fit: cover;
-        display: block;
-        background: #000;
-      }
-      .label {
-        text-align: center;
-        padding: 10px 8px;
-        font-weight: 600;
-      }
-      .choice.selected {
-        border-color: #2563eb;
-        box-shadow: 0 8px 20px rgba(37, 99, 235, 0.25);
-      }
-    </style>
+
   </head>
   <body data-task="ps">
     <main class="container">
@@ -53,7 +18,7 @@
       </header>
 
       <section class="grid">
-        <div class="card" style="display: flex; flex-direction: column; gap: 1px">
+        <div class="card">
           <div id="trialCounter" class="muted">Trial 1</div>
           <div id="choices" class="choice-grid"></div>
           <div style="display: flex; justify-content: space-between; gap: 10px">
