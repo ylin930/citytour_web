@@ -79,7 +79,7 @@
             }
         </style>
     </head>
-    <body>
+    <body data-task="pc">
         <main class="container">
             <header class="header">
                 <div>
@@ -94,12 +94,10 @@
                     <div id="seqbar" class="seqbar"></div>
                     <div id="trialCounter" class="muted">Trial 1</div>
                     <div id="choices" class="choice-grid"></div>
-                    <div style="display: flex; justify-content: space-between; gap: 10px">
-                        <button class="btn" type="button" onclick="history.back()">Back</button>
-                        <div style="display: flex; gap: 10px">
-                            <button id="submitBtn" class="btn primary" disabled>Submit</button>
-                            <button id="nextBtn" class="btn" disabled>Next</button>
-                        </div>
+                    <div style="display: flex; justify-content: flex-end; gap: 10px">
+                        <!-- Back removed -->
+                        <button id="submitBtn" class="btn primary" disabled>Submit</button>
+                        <button id="nextBtn" class="btn" disabled>Next</button>
                     </div>
                     <div id="feedback" class="muted"></div>
                 </div>
@@ -110,38 +108,45 @@
             /* ---------- Params / paths ---------- */
             const qs = new URLSearchParams(location.search);
 
-            // normalize City and Session values (handles 0, 1, 2, etc)
             function canonCity(v) {
                 const s = String(v ?? "City0").trim();
                 const m = s.match(/(\d+)/);
                 return `City${m ? parseInt(m[1], 10) : 0}`;
             }
-
             function canonSession(v) {
                 const s = String(v ?? "0").trim();
                 const m = s.match(/(\d+)/);
                 return `${m ? parseInt(m[1], 10) : 0}`;
             }
 
-            // page task type (from HTML body tag)
-            const TASK = (document.body.dataset.task || "gen").toLowerCase();
+            const TASK = "pc"; // force PC
+            const rawCity = qs.get("city");
+            const session = canonSession(qs.get("session")); // "0".."3"
+            const sessionNum = parseInt(session, 10) || 0;
+            let city = rawCity ? canonCity(rawCity) : `City${sessionNum}`;
+            // If caller mistakenly passes City0 for S1–S3, correct it.
+            if (sessionNum > 0 && city === "City0") city = `City${sessionNum}`;
 
-            const session = canonSession(qs.get("session")); // → "0", "1", "2", "3"
-            const city = canonCity(qs.get("city")); // → "City0", "City1", etc.
-            const v = String(qs.get("v") || "1"); // version number
+            const v = String(qs.get("v") || "1");
             const lang = (localStorage.getItem("ct_language") || "EN").toLowerCase();
 
-            // build the proper config filename
+            // Config path
             const trialsURL = qs.get("trials") || `config/trials_${session}_${city}_${TASK}_v${v}.json`;
-
-            // where to go after finishing this block
             const nextURL = qs.get("next") || `session_video.html?session=${encodeURIComponent(session)}`;
 
-            // file path helpers
-            const instrFirst = (c) => `media/${c}/audio/${lang}/instructions/${TASK}_first.mp3`;
-            const instrNext = (c) => `media/${c}/audio/${lang}/instructions/${TASK}_next.mp3`;
-            const fbPath = (c, name) => `media/${c}/audio/${lang}/feedback/${name}`;
-            const animPath = (n) => `media/${city}/animations/${lang}/${n}.mp4`;
+            // Instruction audio: pc_first (trial1), pc_next (others)
+            const legacyCity0 = city === "City0"; // if your City0 is under /instructions/
+            const instrFirst = (c) =>
+                legacyCity0
+                    ? `media/${c}/audio/${lang}/instructions/pc_first.mp3`
+                    : `media/${c}/audio/${lang}/instructions/pc_first.mp3`; // same path for all if you've moved them
+            const instrNext = (c) =>
+                legacyCity0
+                    ? `media/${c}/audio/${lang}/instructions/pc_next.mp3`
+                    : `media/${c}/audio/${lang}/instructions/pc_next.mp3`;
+
+            // Feedback only for practice (City0/Session0)
+            const isPractice = sessionNum === 0 || city === "City0";
 
             // ---------- State / DOM ----------
             const grid = document.getElementById("choices");
@@ -150,7 +155,7 @@
             const nextBtn = document.getElementById("nextBtn");
             const feedback = document.getElementById("feedback");
             const seqbar = document.getElementById("seqbar");
-            document.getElementById("badge").textContent = `${TASK.toUpperCase()} • ${city} • S${session} v${v}`;
+            document.getElementById("badge").textContent = `PC • ${city} • S${session} v${v}`;
 
             let TRIALS = [];
             let idx = 0,
@@ -172,9 +177,6 @@
                 el.classList.remove("disabled", "playing");
                 el.classList.add("ready");
             };
-            function replaceLang(s) {
-                return (s || "").replace("{lang}", lang);
-            }
 
             function renderSeqBar() {
                 seqbar.innerHTML = "";
@@ -199,15 +201,15 @@
                 vid.style.height = "100%";
                 vid.style.objectFit = "cover";
                 const src = document.createElement("source");
-                src.src = replaceLang(videoUrl);
+                src.src = videoUrl; // already full path from JSON
                 src.type = "video/mp4";
                 vid.appendChild(src);
                 wrap.appendChild(vid);
                 const label = document.createElement("div");
                 label.className = "label";
                 label.textContent = `Option ${position}`;
-                card.appendChild(wrap);
-                card.appendChild(label);
+                card.append(wrap, label);
+
                 card.addEventListener("click", () => {
                     if (!sequenceDone) return;
                     document.querySelectorAll(".choice").forEach((el) => el.classList.remove("selected"));
@@ -215,7 +217,67 @@
                     selected = position;
                     submitBtn.disabled = false;
                 });
+
                 return { card, vid };
+            }
+
+            // Single “autoplay with fallback prompt”
+            function playAudioAuto(url, { promptId, promptText = "▶ Play instruction" } = {}, onEnd) {
+                let bar;
+                const removeBar = () => {
+                    if (bar) bar.remove();
+                };
+                const a = new Audio(url);
+                a.preload = "auto";
+                a.muted = false;
+                a.volume = 1;
+
+                a.addEventListener(
+                    "play",
+                    () => {
+                        audioUnlocked = true;
+                        removeBar();
+                    },
+                    { once: true }
+                );
+                a.addEventListener(
+                    "ended",
+                    () => {
+                        removeBar();
+                        onEnd && onEnd();
+                    },
+                    { once: true }
+                );
+                a.addEventListener(
+                    "error",
+                    () => {
+                        removeBar();
+                        onEnd && onEnd();
+                    },
+                    { once: true }
+                );
+
+                a.play().catch(() => {
+                    bar = document.createElement("div");
+                    bar.id = promptId;
+                    bar.style.margin = "6px 0 8px";
+                    bar.innerHTML = `<button class="btn" type="button">${promptText}</button>`;
+                    seqbar.parentNode.insertBefore(bar, seqbar.nextSibling);
+                    bar.querySelector("button").addEventListener(
+                        "click",
+                        () => {
+                            a.currentTime = 0;
+                            a.play()
+                                .then(removeBar)
+                                .catch(() => {
+                                    removeBar();
+                                    onEnd && onEnd();
+                                });
+                        },
+                        { once: true }
+                    );
+                });
+                return a;
             }
 
             function playOne(holder, onEnd) {
@@ -252,7 +314,7 @@
 
             function startInstructionThenSequence(mediaCity, c1, c2, c3) {
                 let seqStarted = false;
-                const startSequenceOnce = () => {
+                const startSeq = () => {
                     if (seqStarted) return;
                     seqStarted = true;
                     playOne(c1, () =>
@@ -263,52 +325,16 @@
                         )
                     );
                 };
-                const file = idx === 0 ? instrFirst(mediaCity) : instrNext(mediaCity);
-                const instr = new Audio(file);
-                currentInstr = instr;
-                instr.preload = "auto";
-                instr.muted = false;
-                instr.volume = 1;
-                instr.addEventListener("ended", startSequenceOnce, { once: true });
-                instr.addEventListener("error", startSequenceOnce, { once: true });
-                instr.addEventListener(
-                    "play",
-                    () => {
-                        audioUnlocked = true;
-                    },
-                    { once: true }
-                );
-                instr.play().catch(() => {
-                    const bar = document.createElement("div");
-                    bar.style.margin = "6px 0 8px";
-                    const btn = document.createElement("button");
-                    btn.className = "btn";
-                    btn.type = "button";
-                    btn.textContent = "▶ Play instruction";
-                    btn.addEventListener(
-                        "click",
-                        () => {
-                            instr.currentTime = 0;
-                            instr
-                                .play()
-                                .then(() => {
-                                    bar.remove();
-                                })
-                                .catch(() => {
-                                    bar.remove();
-                                    startSequenceOnce();
-                                });
-                        },
-                        { once: true }
-                    );
-                    seqbar.parentNode.insertBefore(bar, seqbar.nextSibling);
-                    bar.appendChild(btn);
-                });
-                setTimeout(startSequenceOnce, 15000);
-            }
 
-            function correctEventIdFor(T) {
-                return Array.isArray(T.choices) ? T.choices[T.correct - 1] : null;
+                const file = idx === 0 ? instrFirst(mediaCity) : instrNext(mediaCity);
+                currentInstr = playAudioAuto(
+                    file,
+                    { promptId: "pcInstrPrompt", promptText: "▶ Play instruction" },
+                    startSeq
+                );
+
+                // Failsafe: if instruction never fires, kick off sequence after 15s
+                setTimeout(startSeq, 15000);
             }
 
             function renderTrial() {
@@ -322,13 +348,11 @@
                 sequenceDone = false;
                 grid.innerHTML = "";
 
-                const [u1, u2, u3] = T.assets;
-                const c1 = buildChoice(1, u1),
-                    c2 = buildChoice(2, u2),
-                    c3 = buildChoice(3, u3);
-                grid.appendChild(c1.card);
-                grid.appendChild(c2.card);
-                grid.appendChild(c3.card);
+                const [u1, u2, u3] = T.assets; // full mp4 paths from JSON
+                const c1 = buildChoice(1, u1);
+                const c2 = buildChoice(2, u2);
+                const c3 = buildChoice(3, u3);
+                grid.append(c1.card, c2.card, c3.card);
                 setDisabled(c1.card);
                 setDisabled(c2.card);
                 setDisabled(c3.card);
@@ -336,20 +360,32 @@
                 startInstructionThenSequence(T.mediaCity, c1, c2, c3);
             }
 
+            // Practice-only feedback (text + optional audio)
+            function playPracticeFeedbackAudio(isCorrect, correctOption, mediaCity) {
+                const file = isCorrect ? "correct.mp3" : `pc_incorrect${correctOption}.mp3`;
+                const url = `media/${mediaCity}/audio/${lang}/feedback/${file}`;
+                const a = new Audio(url);
+                a.preload = "auto";
+                a.muted = !audioUnlocked;
+                a.volume = 1;
+                a.play().catch(() => {});
+            }
+
             submitBtn.addEventListener("click", () => {
                 if (!sequenceDone || selected == null) return;
                 const T = TRIALS[idx];
                 const isCorrect = selected === Number(T.correct);
-                feedback.textContent = isCorrect ? "✅ Correct!" : `❌ Incorrect. It was Option ${T.correct}.`;
+
+                if (isPractice) {
+                    feedback.textContent = isCorrect ? "✅ Correct!" : `❌ Incorrect. It was Option ${T.correct}.`;
+                    playPracticeFeedbackAudio(isCorrect, T.correct, T.mediaCity);
+                } else {
+                    feedback.textContent = ""; // no feedback outside practice
+                }
+
                 submitBtn.disabled = true;
                 nextBtn.disabled = false;
-                // Optional feedback (pc_correct / pc_incorrect{eventId}) — safe to try/catch
-                const corrEvent = correctEventIdFor(T);
-                const clip = isCorrect ? "correct.mp3" : `pc_incorrect${corrEvent}.mp3`;
-                const url = `media/${T.mediaCity}/audio/${lang}/feedback/${clip}`;
-                const a = new Audio(url);
-                a.muted = !audioUnlocked;
-                a.play().catch(() => {});
+
                 const dots = seqbar.querySelectorAll(".seq-dot");
                 if (dots[idx]) dots[idx].classList.add("done");
             });
@@ -363,17 +399,47 @@
                 }
             });
 
-            fetch(trialsURL)
+            // Load trials
+            fetch(trialsURL, { cache: "no-cache" })
                 .then((r) => r.json())
                 .then((data) => {
                     TRIALS = Array.isArray(data) ? data : [];
                     if (!TRIALS.length) throw new Error("No trials");
+                    // Guard: PC should be video/mp4 assets
+                    if (TRIALS[0]?.assets?.[0]?.endsWith(".png")) {
+                        console.warn("Loaded image assets—this looks like PS, not PC:", TRIALS[0]?.assets);
+                    }
                     renderTrial();
                 })
                 .catch((err) => {
                     feedback.textContent = "Could not load trials.";
                     console.error(err);
                 });
+
+            // -------- Dev quick-jump (same as PS) --------
+            if (qs.get("dev") === "1") {
+                const box = document.createElement("div");
+                box.style.cssText =
+                    "position:fixed;right:12px;top:12px;background:#fff;padding:8px 10px;border:1px solid #ddd;border-radius:10px;box-shadow:0 6px 16px rgba(0,0,0,.1);z-index:9999;display:flex;gap:6px;align-items:center;font:14px/1.2 system-ui";
+                const s = document.createElement("select");
+                [0, 1, 2, 3].forEach((n) => {
+                    const o = document.createElement("option");
+                    o.value = n;
+                    o.textContent = `Session ${n}`;
+                    if ((qs.get("session") || "0") == String(n)) o.selected = true;
+                    s.appendChild(o);
+                });
+                const go = document.createElement("button");
+                go.textContent = "Go";
+                go.className = "btn";
+                go.onclick = () => {
+                    const currentV = qs.get("v") || v;
+                    const targetCity = parseInt(s.value, 10) === 0 ? "City0" : `City${parseInt(s.value, 10)}`;
+                    location.search = `?session=${s.value}&city=${targetCity}&v=${currentV}`;
+                };
+                box.append("Dev:", s, go);
+                document.body.appendChild(box);
+            }
         </script>
     </body>
 </html>
