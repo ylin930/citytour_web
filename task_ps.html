@@ -336,5 +336,34 @@
           console.error(err);
         });
     </script>
+
+    <!--to jump to different sessions-->
+    <script>
+      if (new URLSearchParams(location.search).get("dev") === "1") {
+        const box = document.createElement("div");
+        box.style.cssText =
+          "position:fixed;right:12px;top:12px;background:#fff;padding:8px 10px;border:1px solid #ddd;border-radius:10px;box-shadow:0 6px 16px rgba(0,0,0,.1);z-index:9999;display:flex;gap:6px;align-items:center;font:14px/1.2 system-ui";
+        const qs = new URLSearchParams(location.search);
+        const task = (document.body.dataset.task || "gen").toLowerCase();
+        const city = qs.get("city") || "City1";
+        const v = qs.get("v") || "1";
+        const s = document.createElement("select");
+        [0, 1, 2, 3].forEach((n) => {
+          const o = document.createElement("option");
+          o.value = n;
+          o.textContent = `Session ${n}`;
+          if ((qs.get("session") || "0") == String(n)) o.selected = true;
+          s.appendChild(o);
+        });
+        const go = document.createElement("button");
+        go.textContent = "Go";
+        go.className = "btn";
+        go.onclick = () => {
+          location.search = `?session=${s.value}&city=${city}&v=${v}`;
+        };
+        box.append("Dev:", s, go);
+        document.body.appendChild(box);
+      }
+    </script>
   </body>
 </html>
