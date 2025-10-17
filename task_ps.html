@@ -5,10 +5,21 @@
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>PS</title>
     <link rel="stylesheet" href="styles.css" />
+    <style>
+      /* inner white panel that holds the trial */
+      section.grid > .card {
+        padding-bottom: 56px; /* was ~20–32px; add space so labels aren't clipped */
+      }
 
+      /* label under each image */
+      .label {
+        padding: 12px 10px 18px; /* small bottom pad so it clears the corner */
+        line-height: 1.2;
+      }
+    </style>
   </head>
   <body data-task="ps">
-    <main class="container">
+    <main class="container stage">
       <header class="header">
         <div>
           <div class="badge" id="badge">PS</div>
@@ -21,13 +32,15 @@
         <div class="card">
           <div id="trialCounter" class="muted">Trial 1</div>
           <div id="choices" class="choice-grid"></div>
-          <div style="display: flex; justify-content: space-between; gap: 10px">
-            <!--<button class="btn" type="button" onclick="history.back()">Back</button>-->
-            <div style="display: flex; gap: 10px">
-              <button id="submitBtn" class="btn primary" disabled>Submit</button>
-              <button id="nextBtn" class="btn" disabled>Next</button>
+          <div class="bottom-controls">
+            <div class="bottom-controls">
+              <div class="controls-inner">
+                <button id="submitBtn" class="btn primary" disabled>Submit</button>
+                <button id="nextBtn" class="btn" disabled>Next</button>
+              </div>
             </div>
           </div>
+
           <div id="feedback" class="muted"></div>
         </div>
       </section>
@@ -232,7 +245,7 @@
         img.src = guideSrc;
         img.alt = "Guide";
         img.style.maxWidth = "520px";
-        img.style.width = "60%";
+        img.style.width = "100%";
         img.style.borderRadius = "18px";
         img.style.boxShadow = "0 8px 24px rgba(0,0,0,.12)";
         grid.appendChild(img);

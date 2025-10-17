@@ -28,159 +28,118 @@ body::before {
 /* keep main content above the bg */
 main, .container, header, section { position: relative; z-index: 1; }
 
-
-/* ---- Container ---- */
-.container {
-  width: min(1800px, 98vw);          /* wider across the screen */
-  background: transparent;           /* show forest background */
-  border: none;                      /* remove border around main container */
-  padding: 24px;                     /* same internal padding */
-  box-shadow: none;                  /* remove outer shadow */
+/* ---------- Background stays visible ---------- */
+body {
+  position: relative;
+  background: transparent;              /* show the forest */
 }
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  background: url("backgrounds/forest_blur.jpg") center/cover no-repeat;
+  opacity: .55;
+  filter: blur(2px) brightness(1.06);
+  z-index: 0;                           /* behind content */
+}
+main, .container, header, section { position: relative; z-index: 1; }
+html, body { overflow-x: hidden; }      /* never horizontal scroll */
 
-/* wide, transparent stage for tasks so the forest bg is visible */
+/* ---------- Stage container (task pages) ---------- */
 .container.stage {
-  width: min(1800px, 96vw);
+  width: min(1200px, 88vw);     /* narrower so no horizontal scroll */
+  margin: 0 auto;
+  padding: 20px;
   background: transparent;
   border: 0;
   box-shadow: none;
-  padding: 24px;
 }
 
-
-/* ---- Card ---- */
-.card {
-  background: #fff;                  /* keep white for readability */
-  border: 1px solid rgba(0,0,0,.06);
-  border-radius: 20px;
-  padding: 32px;
-  box-shadow: 0 8px 30px rgba(0,0,0,0.08);
-  width: 100%;
-  max-width: none;                   /* allow full horizontal fill */
-  min-height: 62vh;                  /* slightly shallower vertically */
-}
-
-/* ---- Header ---- */
+/* ---------- Header (keep your existing look) ---------- */
 .header { display: flex; align-items: center; gap: 14px; margin-bottom: 18px; }
 .badge { font-size: 12px; text-transform: uppercase; color: #777; letter-spacing: .08em; }
 .h1 { font-size: 28px; font-weight: 800; margin: 4px 0 2px; color: var(--text); }
 .sub { opacity: .8; font-size: 15px; }
 
-/* ---- Consent text styling ---- */
-#consentText {
-  line-height: 1.6;
-  font-size: 1rem;
-  color: #333;
-  white-space: normal;
-}
-
-#consentText p {
-  margin-bottom: 1em;
-}
-
-#consentText ul, 
-#consentText ol {
-  margin-left: 1.5em;
-  margin-bottom: 1em;
-  list-style-position: outside;
-}
-
-#consentText li {
-  margin-bottom: 0.4em;
-}
-
-/*
-#consentText {
-  position: relative;
-  max-height: 40vh;
-  overflow-y: auto;
-  padding-right: 6px;
-}
-*/
-
-#consentText {
-  position: relative;
-  max-height: 40vh;
-  overflow-y: auto;
-  padding-right: 6px;
+/* ---------- White panel for the trial ---------- */
+.container.stage section.grid > .card {
   background: #fff;
-  -webkit-mask-image: linear-gradient(to bottom, black 85%, transparent 100%);
-          mask-image: linear-gradient(to bottom, black 85%, transparent 100%);
-}
-#consentText.scrolled { 
-  -webkit-mask-image: none; 
-          mask-image: none; 
-}
-
-
-/* ---- insructions text styling ---- */
-#instructionText {
-  line-height: 1.6;
-  font-size: 1rem;
-  color: #333;
-  white-space: normal;
-}
-
-/*
-#instructionText {
-  position: relative;
-  max-height: 60vh;
-  overflow-y: auto;
-  padding-right: 6px;
-  background: #fff;
-  -webkit-mask-image: linear-gradient(to bottom, black 85%, transparent 100%);
-          mask-image: linear-gradient(to bottom, black 85%, transparent 100%);
-}
-*/
-
-#instructionText p {
-  margin-bottom: 1em;
-}
-
-#instructionText ul, 
-#instructionText ol {
-  margin-left: 1.5em;
-  margin-bottom: 1em;
-  list-style-position: outside;
-}
-
-#instructionText li {
-  margin-bottom: 0.4em;
-}
-
-/* ---- Checkbox alignment ---- */
-.checkbox {
+  border: 1px solid rgba(0,0,0,.06);
+  border-radius: 20px;
+  box-shadow: 0 8px 30px rgba(0,0,0,0.08);
+  padding: 24px;
+  width: 100%;
+  overflow: visible;
   display: flex;
-  align-items: flex-start;
-  gap: 10px;
-  font-size: 1rem;
-  line-height: 1.4;
-  color: #333;
+  flex-direction: column;
+  gap: 14px;
+  position: relative;
+  padding-bottom: 90px; /* enough room for bottom buttons */
 }
 
-.checkbox input[type="checkbox"] {
-  margin-top: 4px; /* tweak this for vertical centering */
-  width: 18px;
-  height: 18px;
-  accent-color: #006c66; /* same as your primary button color */
-  cursor: pointer;
+/* ---------- Choice grid (3 even columns, no clipping) ---------- */
+.choice-grid {
+  display: grid !important;
+  grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+  gap: 24px !important;
+  align-items: start;
+  justify-items: center;
 }
 
-.checkbox span {
-  display: inline-block;
-  max-width: 90%;
+/* ---------- Choice cards ---------- */
+.choice {
+  width: 100% !important;
+  max-width: 360px;       /* was 440px — narrower columns */
+  border: 2px solid transparent;
+  border-radius: 16px;
+  background: #fff;
+  box-shadow: 0 6px 14px rgba(0,0,0,.08);
+  overflow: hidden;
+  transition: transform .2s, box-shadow .2s, border-color .2s;
+}
+.choice:hover {
+  transform: scale(1.02);
+  box-shadow: 0 10px 28px rgba(0,0,0,0.15);
+}
+.choice.selected {
+  border-color: #2563eb;                 /* blue ring */
+  box-shadow: 0 8px 24px rgba(37,99,235,.25);
 }
 
-/* ---- Cards (boxes)---- */
-.card {
-  background: var(--card);
-  border: 1px solid rgba(0,0,0,.08);
-  border-radius: 14px;
-  padding: 20px;
+/* ---------- Choice image & label ---------- */
+.choice img {
+  width: 100%;
+  height: clamp(300px, 38vh, 460px);  /* shorter images */
+  object-fit: contain;
+  display: block;
+  background: #f3f4f6;
+}
+.label {
+  text-align: center;
+  padding: 12px 10px 16px;
+  font-weight: 700;
+  font-size: 1.05rem;
+  line-height: 1.2;
+  white-space: normal;                   /* avoid clipping the text */
 }
 
-/* ---- Buttons ---- */
-.buttons { display: flex; gap: 12px; flex-wrap: wrap; margin-top: 14px; }
+/* ---------- Bottom-fixed controls ---------- */
+.bottom-controls {
+  position: absolute;
+  bottom: 24px;
+  left: 0;
+  width: 100%;
+  display: flex;
+  justify-content: center;
+  pointer-events: none;                  /* don’t block clicks above */
+}
+.bottom-controls .controls-inner {
+  display: flex;
+  gap: 16px;
+  pointer-events: auto;                  /* re-enable clicking on buttons */
+}
+
+/* ---------- Buttons (keep your palette) ---------- */
 .btn {
   padding: 14px 20px;
   border-radius: 12px;
@@ -194,163 +153,22 @@ main, .container, header, section { position: relative; z-index: 1; }
 .btn:hover { background: #e6f8f5; }
 .btn.primary {
   background: linear-gradient(90deg, var(--accent), var(--accent2));
-  color: white;
+  color: #fff;
   border: none;
 }
 .btn.primary:hover { filter: brightness(1.05); }
 .btn:disabled { opacity: .55; cursor: not-allowed; }
 
-/* ---- Checkbox ---- */
-.checkbox { display: flex; gap: 10px; align-items: flex-start; margin-top: 10px; line-height: 1.45; }
-
-/* ---- Progress ---- */
-.progress {
-  height: 6px; border-radius: 999px; overflow: hidden; background: #eee;
-  margin: 20px 0 0;
-}
-.progress > span {
-  display: block; height: 100%; width: 20%;
-  background: linear-gradient(90deg, var(--accent), var(--accent2));
-}
-
-/* ---- Footer ---- */
-.footerNote { opacity: .75; font-size: 13px; margin-top: 10px; color: #555; }
-
-
-/* ---- PS layout overrides ---- */
-.choice-grid {
-  display: grid !important;
-  grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
-  gap: 32px !important;
-  align-items: start;
-  justify-items: center;
-}
-
-.choice {
-  width: 100% !important;
-  max-width: 560px;
-}
-
-.choice img {
-  width: 100%;
-  height: auto;
-  aspect-ratio: 4 / 3;  /* adjust for your asset shape */
-  object-fit: contain;
-  background: #f3f4f6;
-}
-
-/* responsive fallback */
-@media (max-width: 1100px) {
+/* ---------- Responsive fallbacks ---------- */
+@media (max-width: 1200px) {
+  .container.stage { width: min(1100px, 94vw); }
   .choice-grid { grid-template-columns: repeat(2, minmax(0, 1fr)) !important; }
 }
-@media (max-width: 700px) {
+@media (max-width: 720px) {
+  .container.stage { width: 96vw; padding: 16px; }
   .choice-grid { grid-template-columns: 1fr !important; }
+  .bottom-controls { position: static; margin-top: 16px; }
 }
 
-/* hide Brackets artifacts */
-html :where([data-brackets-id])::before {
-  content: none !important;
-  display: none !important;
-}
-
-/* ---- PS choices look & selection ---- */
-.choice{
-  border:2px solid transparent;
-  border-radius:20px;
-  transition: transform .2s, box-shadow .2s, border-color .2s;
-  box-shadow:0 6px 16px rgba(0,0,0,.08);
-}
-
-.choice:hover {
-  transform: scale(1.02);
-  box-shadow: 0 10px 28px rgba(0,0,0,0.15);
-}
-
-.choice.selected{
-  border-color:#2563eb;
-  box-shadow:0 8px 24px rgba(37,99,235,.25);
-}
-
-/* image sizing (keeps full image) */
-.choice img {
-  width: 100%;
-  height: auto;
-  aspect-ratio: 4 / 3;
-  object-fit: contain;
-  background: #f3f4f6;
-}
-
-/* Show the background image behind everything */
-body { background: transparent; position: relative; }
-body::before {
-  content: "";
-  position: fixed;
-  inset: 0;
-  background: url("backgrounds/forest_blur.jpg") center/cover no-repeat; /* <-- your image */
-  opacity: .55;
-  filter: blur(2px) brightness(1.06);
-  z-index: 0; /* sit behind content */
-}
-/* keep content above the bg layer */
-main, .container, header, section { position: relative; z-index: 1; }
-
-/* Wide, transparent container just for task pages */
-/* inner white panel */
-.container.stage section.grid > .card{
-  width: 100%;
-  padding: 32px 32px 56px; /* extra bottom pad */
-  border-radius: 20px;
-  background: #fff;
-}
-.label{ padding:12px 10px 18px; line-height:1.2; }
-
-/* === PS page fixes (paste at end) =============================== */
-
-/* --- PS: stop right-edge clipping, show bg, keep selection tidy --- */
-
-/* 1) Make the stage a touch narrower (no horizontal squeeze) */
-.container.stage{
-  width: min(1360px, 90vw);
-  margin-inline: auto;
-  overflow-x: visible;            /* don't hard-clip the right edge */
-}
-
-/* Keep the background visible even if earlier rules set body bg */
-html, body{ background: transparent !important; }
-
-/* 2) Let the white card show everything (no masking at the edge) */
-.container.stage section.grid > .card{
-  overflow: visible;              /* allow grid children to breathe */
-  padding-bottom: 56px;           /* extra room so buttons never overlap */
-}
-
-/* 3) Grid wraps before it overflows (no more cut-off) */
-.choice-grid{
-  display: grid !important;
-  grid-template-columns: repeat(auto-fit, minmax(380px, 1fr)) !important;
-  gap: 28px !important;
-  align-items: start;
-  justify-items: center;
-}
-
-/* Remove the hard cap that can push things outside on some widths */
-.choice{
-  max-width: 100% !important;     /* was 560px */
-  overflow: hidden;               /* keep the blue highlight inside */
-  border-radius: 16px;
-}
-
-/* Keep your label from getting clipped */
-.label{
-  padding: 12px 10px 16px;
-  white-space: normal;
-}
-
-/* Responsive fallbacks still apply; feel free to keep yours */
-@media (max-width: 1100px){
-  .choice-grid{ grid-template-columns: repeat(2, minmax(0, 1fr)) !important; }
-}
-@media (max-width: 700px){
-  .choice-grid{ grid-template-columns: 1fr !important; }
-}
-
+/* ---------- Brackets Live Preview artifacts ---------- */
+html :where([data-brackets-id])::before { content: none !important; display: none !important; }
