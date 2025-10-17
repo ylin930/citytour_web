@@ -39,9 +39,6 @@
         border-color: #2563eb;
         box-shadow: 0 8px 20px rgba(37, 99, 235, 0.25);
       }
-      /* placeholder skeleton while instruction plays */
-
-      }
     </style>
   </head>
   <body data-task="ps">
@@ -74,81 +71,238 @@
       /* ---------- Params / paths ---------- */
       const qs = new URLSearchParams(location.search);
 
-      // normalize City and Session values (handles 0, 1, 2, etc)
       function canonCity(v) {
         const s = String(v ?? "City0").trim();
         const m = s.match(/(\d+)/);
         return `City${m ? parseInt(m[1], 10) : 0}`;
       }
-
       function canonSession(v) {
         const s = String(v ?? "0").trim();
         const m = s.match(/(\d+)/);
         return `${m ? parseInt(m[1], 10) : 0}`;
       }
 
-      // page task type (from HTML body tag)
-      const TASK = (document.body.dataset.task || "gen").toLowerCase();
+      const TASK = (document.body.dataset.task || "ps").toLowerCase();
 
-      const session = canonSession(qs.get("session")); // → "0", "1", "2", "3"
-      const city = canonCity(qs.get("city")); // → "City0", "City1", etc.
-      const v = String(qs.get("v") || "1"); // version number
+      const rawCity = qs.get("city");
+      const session = (function canonSession(v) {
+        const s = String(v ?? "0").trim();
+        const m = s.match(/(\d+)/);
+        return `${m ? parseInt(m[1], 10) : 0}`;
+      })(qs.get("session"));
+
+      const sessionNum = parseInt(session, 10) || 0;
+
+      // Start from query or session→City{session}
+      let city = rawCity
+        ? (function canonCity(v) {
+            const s = String(v ?? "City0").trim();
+            const m = s.match(/(\d+)/);
+            return `City${m ? parseInt(m[1], 10) : 0}`;
+          })(rawCity)
+        : `City${sessionNum}`;
+
+      // If user passed City0 but we're in S1–S3, correct it.
+      if (sessionNum > 0 && city === "City0") {
+        city = `City${sessionNum}`;
+      }
+
+      const v = String(qs.get("v") || "1");
       const lang = (localStorage.getItem("ct_language") || "EN").toLowerCase();
 
-      // build the proper config filename
+      // config file
       const trialsURL = qs.get("trials") || `config/trials_${session}_${city}_${TASK}_v${v}.json`;
-      console.log("[trialsURL]", trialsURL);
-
       // where to go after finishing this block
       const nextURL = qs.get("next") || `session_video.html?session=${encodeURIComponent(session)}`;
 
-      // file path helpers
-      const instrFirst = (c) => `media/${c}/audio/${lang}/instructions/${TASK}_first.mp3`;
-      const instrNext = (c) => `media/${c}/audio/${lang}/instructions/${TASK}_next.mp3`;
-      const fbPath = (c, name) => `media/${c}/audio/${lang}/feedback/${name}`;
+      // PS audio paths
+      // PS audio paths (handle City0 legacy layout)
       const guideSrc = `media/${city}/images/guide.png`;
-      //const animPath = (n) => `media/${city}/animations/${lang}/${n}.mp4`;
+      const legacyCity0 = city === "City0"; // <-- City0 uses /instructions/ folder
 
-      // ---------- PS-specific instruction audio ----------
-      const introAudio = `media/${city}/audio/${lang}/instructions/ps_intro.mp3`;
-      const perTrialAudio = `media/${city}/audio/${lang}/instructions/ps.mp3`;
+      const introAudio = legacyCity0
+        ? `media/${city}/audio/${lang}/instructions/ps_intro.mp3`
+        : `media/${city}/audio/${lang}/ps_intro.mp3`;
 
-      // ---------- State / DOM ----------
+      const perTrialAudio = legacyCity0
+        ? `media/${city}/audio/${lang}/instructions/ps.mp3`
+        : `media/${city}/audio/${lang}/ps.mp3`;
+
+      // ---------- DOM ----------
       const grid = document.getElementById("choices");
       const trialCounter = document.getElementById("trialCounter");
       const submitBtn = document.getElementById("submitBtn");
       const nextBtn = document.getElementById("nextBtn");
       const feedback = document.getElementById("feedback");
-      //const seqbar = document.getElementById("seqbar");
-      document.getElementById("badge").textContent = `${TASK.toUpperCase()} • S${session}`;
+      document.getElementById("badge").textContent = `PS • S${session}`;
 
+      // ---------- State ----------
       let TRIALS = [];
-      let idx = 0,
-        selected = null,
-        sequenceDone = false;
-      let audioUnlocked = false;
-      let currentInstr = null,
-        currentPlaying = null;
+      let idx = 0;
+      let selected = null;
 
+      const isPractice = sessionNum === 0 || city === "City0";
+
+      // ---------- Helpers: one-time prompt for autoplay fallback ----------
+      function ensurePrompt(id, text = "▶ Play audio") {
+        let bar = document.getElementById(id);
+        if (!bar) {
+          bar = document.createElement("div");
+          bar.id = id;
+          bar.style.margin = "8px 0 12px";
+          bar.innerHTML = `<button class="btn" type="button">${text}</button>`;
+          const anchor = document.getElementById("trialCounter") || document.querySelector("header") || document.body;
+          anchor.insertAdjacentElement("afterend", bar);
+        }
+        return bar.querySelector("button");
+      }
+      function removePrompt(id) {
+        const el = document.getElementById(id);
+        if (el) el.remove();
+      }
+
+      function playPracticeFeedbackAudio(isCorrect, correctOption) {
+        // correct -> feedback/correct.mp3
+        // wrong   -> feedback/ps_incorrect{n}.mp3
+        const file = isCorrect ? "correct.mp3" : `ps_incorrect${correctOption}.mp3`;
+        const url = `media/${city}/audio/${lang}/feedback/${file}`;
+        const a = new Audio(url);
+        a.preload = "auto";
+        a.muted = false;
+        a.volume = 1;
+        a.play().catch(() => {
+          /* ok to fail silently */
+        });
+      }
+
+      // play an audio with graceful fallback prompt
+      function playAudioAuto(url, { promptId, promptText = "▶ Play instruction" } = {}, onEnd) {
+        removePrompt(promptId);
+
+        const a = new Audio(url);
+        a.preload = "auto";
+        a.muted = false;
+        a.volume = 1;
+
+        let played = false;
+        let cleaned = false;
+
+        const cleanup = () => {
+          if (cleaned) return;
+          cleaned = true;
+          removePrompt(promptId);
+          document.removeEventListener("click", clickOnce, { capture: true });
+        };
+
+        const clickOnce = () => {
+          a.currentTime = 0;
+          a.play()
+            .then(() => cleanup())
+            .catch(() => {
+              /* ignore */
+            });
+        };
+
+        a.addEventListener(
+          "play",
+          () => {
+            played = true;
+            cleanup();
+          },
+          { once: true }
+        );
+
+        a.addEventListener(
+          "ended",
+          () => {
+            cleanup();
+            onEnd && onEnd();
+          },
+          { once: true }
+        );
+        a.addEventListener(
+          "error",
+          () => {
+            cleanup();
+            onEnd && onEnd();
+          },
+          { once: true }
+        );
+
+        // Try autoplay
+        a.play().catch(() => {
+          /* some browsers reject, others fail silently */
+        });
+
+        // If no 'play' fired quickly, show prompt and also listen for first page tap
+        setTimeout(() => {
+          if (played) return;
+          const btn = ensurePrompt(promptId, promptText);
+          btn.onclick = () => {
+            a.currentTime = 0;
+            a.play()
+              .then(() => cleanup())
+              .catch(() => {
+                cleanup();
+                onEnd && onEnd();
+              });
+          };
+          document.addEventListener("click", clickOnce, { once: true, capture: true });
+        }, 700);
+
+        return a;
+      }
+
+      // Center the guide image in the grid area
+      function showGuideCentered() {
+        grid.style.display = "flex";
+        grid.style.justifyContent = "center";
+        grid.style.alignItems = "center";
+        grid.style.minHeight = "60vh";
+        grid.style.background = "transparent";
+        grid.innerHTML = "";
+
+        const img = document.createElement("img");
+        img.src = guideSrc;
+        img.alt = "Guide";
+        img.style.maxWidth = "520px";
+        img.style.width = "60%";
+        img.style.borderRadius = "18px";
+        img.style.boxShadow = "0 8px 24px rgba(0,0,0,.12)";
+        grid.appendChild(img);
+
+        return () => {
+          grid.innerHTML = "";
+          // reset grid layout so choices use CSS grid again
+          grid.style.display = "";
+          grid.style.justifyContent = "";
+          grid.style.alignItems = "";
+          grid.style.minHeight = "";
+          grid.style.background = "";
+        };
+      }
+
+      // ---------- UI builders ----------
       function buildChoice(position, imgUrl) {
         const card = document.createElement("div");
         card.className = "choice";
 
+        const wrap = document.createElement("div");
+        wrap.className = "img-wrap";
+
         const img = document.createElement("img");
         img.src = imgUrl;
-        img.alt = `Option ${position}`;
         img.onerror = () => {
-          console.warn("Image failed to load:", imgUrl);
+          wrap.style.background = "#fee";
           img.style.objectFit = "contain";
-          img.style.background = "#fee";
         };
 
         const label = document.createElement("div");
         label.className = "label";
         label.textContent = `Option ${position}`;
 
-        card.appendChild(img);
-        card.appendChild(label);
+        wrap.appendChild(img);
+        card.append(wrap, label);
 
         card.addEventListener("click", () => {
           document.querySelectorAll(".choice").forEach((el) => el.classList.remove("selected"));
@@ -160,64 +314,10 @@
         return card;
       }
 
-      function playAudioOnce(url, onEnd) {
-        const a = new Audio(url);
-        a.preload = "auto";
-        a.muted = false;
-        a.volume = 1;
-
-        a.addEventListener(
-          "play",
-          () => {
-            const prompt = document.getElementById("instrPrompt");
-            if (prompt) prompt.remove();
-          },
-          { once: true }
-        );
-
-        a.addEventListener(
-          "play",
-          () => {
-            audioUnlocked = true;
-          },
-          { once: true }
-        );
-        a.addEventListener("ended", () => onEnd && onEnd(), { once: true });
-        a.addEventListener("error", () => onEnd && onEnd(), { once: true });
-        a.play().catch(() => {
-          // prompt
-          const bar = document.createElement("div");
-          bar.style.margin = "6px 0 8px";
-          const btn = document.createElement("button");
-          btn.className = "btn";
-          btn.type = "button";
-          btn.textContent = "▶ Play instruction";
-          btn.addEventListener(
-            "click",
-            () => {
-              a.currentTime = 0;
-              a.play()
-                .then(() => {
-                  bar.remove();
-                })
-                .catch(() => {
-                  bar.remove();
-                  onEnd && onEnd();
-                });
-            },
-            { once: true }
-          );
-          //seqbar.parentNode.insertBefore(bar, seqbar.nextSibling);
-          // replace the prompt insert with a safe anchor:
-          const anchor = document.getElementById("trialCounter") || document.querySelector("header") || document.body;
-          anchor.insertAdjacentElement("afterend", bar);
-
-          bar.appendChild(btn);
-        });
-      }
-
       function renderTrial() {
         const T = TRIALS[idx];
+
+        trialCounter.hidden = false;
         trialCounter.textContent = `Trial ${idx + 1} of ${TRIALS.length}`;
         feedback.textContent = "";
         submitBtn.disabled = true;
@@ -228,42 +328,27 @@
         const [i1, i2, i3] = T.assets;
         grid.append(buildChoice(1, i1), buildChoice(2, i2), buildChoice(3, i3));
 
-        // You can still play the per-trial instruction; it won’t affect visibility
-        playAudioOnce(perTrialAudio, () => {});
-      }
-
-      function playFeedbackAudio(task, city, lang, isCorrect, correctOption) {
-        // Only for practice
-        const isPractice = city === "City0" || String(session) === "0";
-        if (!isPractice) return;
-
-        // Build filename pattern:
-        // correct  -> "correct.mp3"
-        // incorrect-> "<task>_incorrect{correctOption}.mp3" e.g., ps_incorrect2.mp3
-        const prefix = task.toLowerCase(); // "ps" | "pc" | "gen"
-        const file = isCorrect ? "correct.mp3" : `${prefix}_incorrect${correctOption}.mp3`;
-        const url = `media/${city}/audio/${lang}/feedback/${file}`;
-
-        const a = new Audio(url);
-        a.preload = "auto";
-        a.muted = false;
-        a.volume = 1;
-        a.play().catch((err) => {
-          console.warn("Feedback audio failed (ok to ignore):", url, err?.message);
+        // per-trial instruction (options already visible)
+        playAudioAuto(perTrialAudio, { promptId: "trialPrompt", promptText: "▶ Play instruction" }, () => {
+          /* nothing else to do */
         });
       }
 
+      // practice-only feedback text (no audio for now)
       submitBtn.addEventListener("click", () => {
         if (selected == null) return;
         const T = TRIALS[idx];
         const isCorrect = selected === Number(T.correct);
 
-        feedback.textContent = isCorrect ? "✅ Correct!" : `❌ Incorrect. It was Option ${T.correct}.`;
+        if (isPractice) {
+          feedback.textContent = isCorrect ? "✅ Correct!" : `❌ Incorrect. It was Option ${T.correct}.`;
+          playPracticeFeedbackAudio(isCorrect, T.correct); // <- audio feedback (City0 only)
+        } else {
+          feedback.textContent = ""; // no feedback for sessions 1–3
+        }
+
         submitBtn.disabled = true;
         nextBtn.disabled = false;
-
-        // Play feedback audio (practice only)
-        playFeedbackAudio(TASK, city, lang, isCorrect, T.correct);
       });
 
       nextBtn.addEventListener("click", () => {
@@ -275,59 +360,50 @@
         }
       });
 
-      // boot: play intro once, then first trial
-      fetch(trialsURL)
-        .then((r) => r.json())
+      // ---------- Boot: load trials, show guide, play intro, then render first trial ----------
+      async function loadTrialsJSON() {
+        const task = (document.body.dataset.task || "ps").toLowerCase();
+        const v = String(new URLSearchParams(location.search).get("v") || "1");
+        const s = session; // from your existing code
+        const c = city; // from the safer default above
+
+        console.log("[PS boot]", { session, city, v, task: TASK });
+
+        const candidates = [
+          `config/trials_${s}_${c}_${task}_v${v}.json`,
+          // If city wasn’t explicitly set, try mapping session->City{session}
+          `config/trials_${s}_City${parseInt(s, 10) || 0}_${task}_v${v}.json`,
+          // Last resort: City1
+          `config/trials_${s}_City1_${task}_v${v}.json`
+        ];
+
+        for (const url of candidates) {
+          try {
+            const res = await fetch(url, { cache: "no-cache" });
+            if (res.ok) {
+              console.log("[trialsURL]", url);
+              return await res.json();
+            }
+          } catch {}
+        }
+        throw new Error("No trials JSON found.");
+      }
+
+      loadTrialsJSON()
         .then((data) => {
           TRIALS = Array.isArray(data) ? data : [];
           if (!TRIALS.length) throw new Error("No trials");
 
-          // hide trial counter during intro
+          // Hide the counter during the intro
           trialCounter.hidden = true;
 
-          // ---- render guide during intro ----
-          grid.innerHTML = "";
-          grid.style.display = "flex";
-          grid.style.flexDirection = "column";
-          grid.style.justifyContent = "center";
-          grid.style.alignItems = "center";
-          grid.style.minHeight = "70vh";
-          grid.style.background = "#fff"; // optional, keeps a clean area
+          // Show the guide while the *intro* audio plays
+          const cleanupGuide = showGuideCentered();
 
-          const guideImg = document.createElement("img");
-          guideImg.src = guideSrc;
-          guideImg.alt = "Guide";
-          guideImg.style.width = "auto";
-          guideImg.style.maxWidth = "65vw";
-          guideImg.style.maxHeight = "70vh";
-          guideImg.style.objectFit = "contain";
-          guideImg.style.borderRadius = "18px";
-          guideImg.style.boxShadow = "0 8px 24px rgba(0,0,0,.15)";
-          guideImg.onerror = () => {
-            guideImg.remove();
-            const fallback = document.createElement("div");
-            fallback.textContent = "Guide image missing";
-            fallback.style.padding = "24px 32px";
-            fallback.style.background = "#fff3f3";
-            fallback.style.border = "1px solid #f5c2c7";
-            fallback.style.borderRadius = "12px";
-            grid.appendChild(fallback);
-          };
-
-          grid.appendChild(guideImg);
-
-          // ---- play the *intro* audio with guide visible ----
-          playAudioOnce(introAudio, () => {
-            // reset grid back to normal after intro
-            grid.style.display = ""; // reset to default grid
-            grid.style.flexDirection = "";
-            grid.style.justifyContent = "";
-            grid.style.alignItems = "";
-            grid.style.minHeight = "";
-            grid.style.background = "";
-
-            guideImg.remove();
-            trialCounter.hidden = false;
+          // Try to autoplay; if blocked, a single prompt appears ("▶ Play introduction")
+          playAudioAuto(introAudio, { promptId: "introPrompt", promptText: "▶ Play introduction" }, () => {
+            // After intro ends (or user taps), remove guide and render trial 1
+            cleanupGuide();
             renderTrial();
           });
         })
@@ -335,18 +411,12 @@
           feedback.textContent = "Could not load trials.";
           console.error(err);
         });
-    </script>
 
-    <!--to jump to different sessions-->
-    <script>
-      if (new URLSearchParams(location.search).get("dev") === "1") {
+      // ---------- Dev quick-jump (optional) ----------
+      if (qs.get("dev") === "1") {
         const box = document.createElement("div");
         box.style.cssText =
           "position:fixed;right:12px;top:12px;background:#fff;padding:8px 10px;border:1px solid #ddd;border-radius:10px;box-shadow:0 6px 16px rgba(0,0,0,.1);z-index:9999;display:flex;gap:6px;align-items:center;font:14px/1.2 system-ui";
-        const qs = new URLSearchParams(location.search);
-        const task = (document.body.dataset.task || "gen").toLowerCase();
-        const city = qs.get("city") || "City1";
-        const v = qs.get("v") || "1";
         const s = document.createElement("select");
         [0, 1, 2, 3].forEach((n) => {
           const o = document.createElement("option");
@@ -358,9 +428,9 @@
         const go = document.createElement("button");
         go.textContent = "Go";
         go.className = "btn";
-        go.onclick = () => {
-          location.search = `?session=${s.value}&city=${city}&v=${v}`;
-        };
+        const currentCity = qs.get("city") || city;
+        const currentV = qs.get("v") || v;
+        go.onclick = () => (location.search = `?session=${s.value}&city=${currentCity}&v=${currentV}`);
         box.append("Dev:", s, go);
         document.body.appendChild(box);
       }
