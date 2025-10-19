@@ -18,8 +18,8 @@ import {
 
 /* -------- PATHS -------- */
 const PATHS = {
-  consent: "consent.html",
-  instructions: "instructions.html",
+  consent: "2_consent.html",
+  instructions: "4_instructions.html",
   task: (n) => `session${n}/index.html`,
   debrief: "debrief.html"
 };
@@ -28,7 +28,8 @@ const PATHS = {
 const COLLECTIONS = {
   preIds: "pre_ids",
   participants: "participants",
-  idMapping: "id_mapping"
+  idMapping: "id_mapping",
+  balanceRules: "balance_rules"
 };
 
 /* -------- CONSENT ROUTING -------- */
@@ -50,7 +51,7 @@ const CONSENT_FILES = {
 function getConsentPage() {
   const lang = (localStorage.getItem("ct.lang") || "").toUpperCase(); // "EN" / "GER"
   const group = (localStorage.getItem("ct.group") || "").toLowerCase(); // "adult" / "child"
-  const file = CONSENT_FILES[lang]?.[group] || "consent.html";
+  const file = CONSENT_FILES[lang]?.[group] || "2_consent.html";
   // Return full path in /consents/
   return CONSENT_DIR + file;
 }
@@ -72,10 +73,76 @@ function addHours(ts, hrs) {
   return Timestamp.fromMillis(ms);
 }
 
-async function assignBalancedGroup({ presetGroup } = {}) {
-  // Prefer explicit preset → else from first page → else default
+async function assignBalancedGroup({ db, presetGroup } = {}) {
+  // Always use UI selection if available
   const fromUI = (localStorage.getItem("ct.group") || "").toLowerCase();
-  return presetGroup || (fromUI === "adult" ? "adult" : fromUI === "child" ? "child" : "child");
+  console.log("assignBalancedGroup - fromUI:", fromUI, "presetGroup:", presetGroup);
+  console.log("assignBalancedGroup - localStorage values:", {
+    "ct.group": localStorage.getItem("ct.group"),
+    "ct_role": localStorage.getItem("ct_role"),
+    "ct_language": localStorage.getItem("ct_language"),
+    "ct.lang": localStorage.getItem("ct.lang")
+  });
+  
+  if (fromUI === "adult" || fromUI === "child") {
+    console.log("assignBalancedGroup - using UI selection:", fromUI);
+    return fromUI;
+  }
+  
+  // Fallback to preset group
+  if (presetGroup) {
+    console.log("assignBalancedGroup - using preset group:", presetGroup.toLowerCase());
+    return presetGroup.toLowerCase();
+  }
+  
+  // Default to adult if no selection
+  console.log("assignBalancedGroup - using default: adult");
+  return "adult";
+}
+
+async function getBalancedVersion(db, group) {
+  try {
+    // Get current counts for this group
+    const ruleRef = doc(db, COLLECTIONS.balanceRules, group);
+    const ruleSnap = await getDoc(ruleRef);
+    
+    let version1Count = 0;
+    let version2Count = 0;
+    let version3Count = 0;
+    let version4Count = 0;
+    
+    if (ruleSnap.exists()) {
+      const data = ruleSnap.data();
+      version1Count = data.version1 || 0;
+      version2Count = data.version2 || 0;
+      version3Count = data.version3 || 0;
+      version4Count = data.version4 || 0;
+    }
+    
+    // Find the version with the fewest participants
+    const counts = [
+      { version: 1, count: version1Count },
+      { version: 2, count: version2Count },
+      { version: 3, count: version3Count },
+      { version: 4, count: version4Count }
+    ];
+    
+    // Sort by count and assign to the one with fewest participants
+    counts.sort((a, b) => a.count - b.count);
+    const assignedVersion = counts[0].version;
+    
+    // Update the count
+    await updateDoc(ruleRef, {
+      [`version${assignedVersion}`]: counts[0].count + 1,
+      lastAssigned: serverTimestamp()
+    });
+    
+    return assignedVersion;
+  } catch (error) {
+    console.error("Error in balancing:", error);
+    // Default to version 1 if balancing fails
+    return 1;
+  }
 }
 
 function randomId(len = 8) {
@@ -102,7 +169,10 @@ async function createMappingTxn(tx, db, preId, presetGroup) {
     const mRef = doc(db, COLLECTIONS.idMapping, newId);
     const mSnap = await tx.get(mRef);
     if (!mSnap.exists()) {
-      const group = await assignBalancedGroup({ presetGroup });
+      console.log("createMappingTxn - creating new mapping for preId:", preId, "presetGroup:", presetGroup);
+      const group = await assignBalancedGroup({ db, presetGroup });
+      console.log("createMappingTxn - assigned group:", group);
+      
       tx.set(mRef, {
         pre_id: preId,
         new_id: newId,
@@ -134,11 +204,27 @@ export async function handleIdSubmit({ db, inputId = "" }) {
       const raw = pre.get("status");
       const status = raw === "unused" ? "available" : raw || "available";
       const presetGroup = pre.get("group") || null;
+      console.log("handleIdSubmit - presetGroup from database:", presetGroup);
+      console.log("handleIdSubmit - pre_ids document data:", pre.data());
 
       if (status === "available") {
         // Create mapping + participant under PRE ID (not newId)
         const { newId, group } = await createMappingTxn(tx, db, preId, presetGroup);
+        console.log("handleIdSubmit - group assigned:", group);
         const pRef = doc(db, COLLECTIONS.participants, preId);
+
+        // Get language and country from localStorage
+        const lang = (localStorage.getItem("ct.lang") || localStorage.getItem("ct_language") || "EN").toUpperCase();
+        const country = (localStorage.getItem("ct_country") || (lang === "GER" ? "DE" : "US")).toUpperCase();
+        console.log("handleIdSubmit - storing participant with group:", group, "lang:", lang, "country:", country);
+        console.log("handleIdSubmit - about to store in participants collection:", {
+          participantId: preId,
+          newId,
+          preId,
+          group,
+          language: lang,
+          country: country
+        });
 
         tx.set(
           pRef,
@@ -147,6 +233,8 @@ export async function handleIdSubmit({ db, inputId = "" }) {
             newId,
             preId,
             group,
+            language: lang,
+            country: country,
             nextSession: 1,
             createdAt: serverTimestamp(),
             sessions: {
@@ -187,11 +275,20 @@ export async function handleIdSubmit({ db, inputId = "" }) {
       throw new Error("Invalid pre_id status");
     });
 
-    // If created new participant → proceed
+    // If created new participant → assign version and proceed
     if (pid) {
+      // Get the group from the participant data to assign version
+      const pRef = doc(db, COLLECTIONS.participants, pid);
+      const pSnap = await getDoc(pRef);
+      if (pSnap.exists()) {
+        const group = pSnap.data().group;
+        const version = await getBalancedVersion(db, group);
+        await updateDoc(pRef, { version });
+      }
+      
       localStorage.setItem("ct.participantId", pid);
       localStorage.setItem("ct.preId", preId);
-      return routeFromParticipant({ db, participantId: pid });
+      return { ok: true }; // Don't redirect, let the calling page handle it
     }
 
     // If already "used", look up mapping and ensure participant exists
@@ -218,6 +315,10 @@ export async function handleIdSubmit({ db, inputId = "" }) {
     const pRef = doc(db, COLLECTIONS.participants, preId);
     const pSnap = await getDoc(pRef);
     if (!pSnap.exists()) {
+      // Get language and country from localStorage
+      const lang = (localStorage.getItem("ct.lang") || localStorage.getItem("ct_language") || "EN").toUpperCase();
+      const country = (localStorage.getItem("ct_country") || (lang === "GER" ? "DE" : "US")).toUpperCase();
+      
       await setDoc(
         pRef,
         {
@@ -225,6 +326,8 @@ export async function handleIdSubmit({ db, inputId = "" }) {
           newId: mappedId,
           preId,
           group: found?.data?.group || "child",
+          language: lang,
+          country: country,
           nextSession: 1,
           createdAt: serverTimestamp(),
           sessions: {
@@ -260,7 +363,7 @@ export async function handleIdSubmit({ db, inputId = "" }) {
 
     localStorage.setItem("ct.participantId", preId);
     localStorage.setItem("ct.preId", preId);
-    return routeFromParticipant({ db, participantId: preId });
+    return { ok: true }; // Don't redirect, let the calling page handle it
   }
 
   // Step 2: No pre_id found — try participants directly
@@ -268,7 +371,7 @@ export async function handleIdSubmit({ db, inputId = "" }) {
   const pSnap = await getDoc(pRef);
   if (pSnap.exists()) {
     localStorage.setItem("ct.participantId", inputId);
-    return routeFromParticipant({ db, participantId: inputId });
+    return { ok: true }; // Don't redirect, let the calling page handle it
   }
 
   return { blocked: { type: "invalid" } };
@@ -294,7 +397,7 @@ async function routeFromParticipant({ db, participantId }) {
 
   // --- Session 1: go to appropriate consent page ---
   if (next === 1) {
-    window.location.href = "consent.html";
+    window.location.href = "2_consent.html";
     return { ok: true };
   }
 
@@ -309,7 +412,7 @@ async function routeFromParticipant({ db, participantId }) {
   if (now > closeAt)
     return { blocked: { type: "invalid" } };
 
-  window.location.href = "instructions.html";
+  window.location.href = "4_instructions.html";
   return { ok: true };
 }
 

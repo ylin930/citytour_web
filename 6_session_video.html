@@ -11,7 +11,7 @@
         <style>
             .video-wrap {
                 position: relative;
-                max-width: 820px;
+                max-width: 600px;
                 margin: 0 auto;
                 border-radius: 16px;
                 overflow: hidden;
@@ -46,16 +46,6 @@
                 cursor: pointer;
                 user-select: none;
             }
-            #unmuteBtn {
-                position: absolute;
-                bottom: 10px;
-                right: 12px;
-                background: rgba(255, 255, 255, 0.9);
-                padding: 6px 10px;
-                border-radius: 8px;
-                font-size: 14px;
-                cursor: pointer;
-            }
             #nextBtn[disabled] {
                 opacity: 0.5;
                 pointer-events: none;
@@ -66,9 +56,9 @@
         <main class="container">
             <header class="header">
                 <div>
-                    <div class="badge" id="badge">CITY TOUR • SESSION</div>
-                    <div class="h1" id="title">Welcome</div>
-                    <div class="sub" id="subtitle">Please watch the short video. “Next” unlocks when it ends.</div>
+                    <div class="badge" id="badge">CITY TOUR • SESSION <span id="sessionNumber">1</span></div>
+                    <div class="h1" id="title">Session <span id="sessionNumberTitle">1</span></div>
+                    <div class="sub" id="subtitle">Please watch the short video. "Next" unlocks when it ends.</div>
                 </div>
             </header>
 
@@ -87,13 +77,11 @@
                         </video>
 
                         <div id="loading" class="loading">Loading video…</div>
-                        <button id="unmuteBtn" class="hidden">🔇 Unmute</button>
 
                         <div id="overlay" class="overlay hidden"><div class="pill">Play</div></div>
                     </div>
 
                     <div class="buttons" style="justify-content: flex-end; width: 100%">
-                        <button class="btn" type="button" onclick="history.back()">Back</button>
                         <button id="nextBtn" class="btn primary" type="button" disabled>Next</button>
                     </div>
                 </div>
@@ -116,11 +104,50 @@
             const srcEl = document.getElementById("introSrc");
             const loading = document.getElementById("loading");
             const overlay = document.getElementById("overlay");
-            const unmute = document.getElementById("unmuteBtn");
             const nextBtn = document.getElementById("nextBtn");
             const badgeEl = document.getElementById("badge");
             const titleEl = document.getElementById("title");
+            const sessionNumberEl = document.getElementById("sessionNumber");
+            const sessionNumberTitleEl = document.getElementById("sessionNumberTitle");
 
+            // ---------- Get language and session from URL parameters or localStorage
+            const lang = (localStorage.getItem("ct.lang") || localStorage.getItem("ct_language") || "EN").toUpperCase();
+            const qs = new URLSearchParams(location.search);
+            let session = parseInt(qs.get("session") || localStorage.getItem("ct.session") || "1");
+            
+            // If no session in URL or localStorage, default to 1
+            if (!qs.get("session") && !localStorage.getItem("ct.session")) {
+                session = 1;
+                localStorage.setItem("ct.session", "1");
+            }
+            
+            console.log("Session video - lang:", lang, "session:", session, "from URL:", qs.get("session"));
+
+            // ---------- Update UI with session number
+            function updateUI() {
+                if (sessionNumberEl) {
+                    sessionNumberEl.textContent = session;
+                }
+                if (sessionNumberTitleEl) {
+                    sessionNumberTitleEl.textContent = session;
+                }
+                
+                // Update title based on session
+                if (titleEl) {
+                    if (session === 1) {
+                        titleEl.textContent = "Welcome to City Tour";
+                    } else {
+                        titleEl.textContent = `Session ${session} - Continue`;
+                    }
+                }
+            }
+
+            // Update UI immediately if DOM is ready, otherwise wait
+            if (document.readyState === 'loading') {
+                document.addEventListener('DOMContentLoaded', updateUI);
+            } else {
+                updateUI();
+            }
 
             // ---------- Map session → video paths
             const VIDEO_MAP = {
@@ -163,10 +190,13 @@
                     }
 
                     const choice = VIDEO_MAP[session] || VIDEO_MAP[1];
+                    console.log("Session video - selected video choice:", choice);
+                    
                     if (choice.poster) video.setAttribute("poster", choice.poster);
 
                     // Load source with robust fallback
                     const url = await getMediaURL(choice.storage, choice.hosting);
+                    console.log("Session video - loading video URL:", url);
                     srcEl.src = url;
                     video.load();
 
@@ -186,14 +216,6 @@
                         } catch {}
                     });
 
-                    // Unmute toggle (only if button exists)
-                    if (unmute) {
-                        video.addEventListener("playing", () => unmute.classList.remove("hidden"));
-                        unmute.addEventListener("click", () => {
-                            video.muted = !video.muted;
-                            unmute.textContent = video.muted ? "🔇 Unmute" : "🔊 Mute";
-                        });
-                    }
 
                     // Enable Next when the video ends (normal mode)
                     video.addEventListener("ended", () => {
@@ -201,11 +223,77 @@
                         nextBtn.classList.remove("opacity-50", "pointer-events-none");
                     });
 
+                    // Handle Next button click
+                    nextBtn.addEventListener("click", () => {
+                        console.log("Session video - current session:", session);
+                        
+                        // Route to next page based on current session
+                        if (session === 1) {
+                            // Session 1: Cover story → Practice (City0) → Practice tasks → City 1 tasks
+                            console.log("Session 1 - routing to practice intro");
+                            window.location.href = "practice_intro.html";
+                        } else if (session === 2) {
+                            // Session 2: Continue video → City 2 tasks
+                            console.log("Session 2 - routing to City 2 tasks");
+                            window.location.href = "task_gen.html?session=2&city=City2";
+                        } else if (session === 3) {
+                            // Session 3: Continue video → City 3 tasks
+                            console.log("Session 3 - routing to City 3 tasks");
+                            window.location.href = "task_gen.html?session=3&city=City3";
+                        } else {
+                            // Fallback or completed all sessions
+                            console.log("All sessions completed or unknown session");
+                            window.location.href = "1_index.html";
+                        }
+                    });
+
                 } catch (err) {
                     // Last-resort: don't strand the user — enable Next
                     nextBtn.disabled = false;
                 }
             })();
+
+            // Dev tools support
+            window.CT_NEXT = () => {
+                if (session === 1) {
+                    return "practice_intro.html";
+                } else if (session === 2) {
+                    return "task_gen.html?session=2&city=City2";
+                } else if (session === 3) {
+                    return "task_gen.html?session=3&city=City3";
+                } else {
+                    return "1_index.html";
+                }
+            };
+
+            // Add session navigation shortcuts for dev tools
+            document.addEventListener('keydown', (e) => {
+                const qs = new URLSearchParams(location.search);
+                if (qs.get("dev") === "1") {
+                    // Number keys 1, 2, 3 to jump to specific sessions
+                    if (e.key === "1") {
+                        e.preventDefault();
+                        window.location.href = "6_session_video.html?session=1&dev=1";
+                    } else if (e.key === "2") {
+                        e.preventDefault();
+                        window.location.href = "6_session_video.html?session=2&dev=1";
+                    } else if (e.key === "3") {
+                        e.preventDefault();
+                        window.location.href = "6_session_video.html?session=3&dev=1";
+                    }
+                    // Show extended help for session navigation
+                    else if (e.key === "h") {
+                        e.preventDefault();
+                        // Create a toast message with session navigation help
+                        const el = document.createElement("div");
+                        el.textContent = "Session nav: 1=Session1, 2=Session2, 3=Session3";
+                        el.style.cssText = "position:fixed;bottom:12px;right:12px;z-index:99999;padding:10px 14px;background:#111;color:#fff;border-radius:10px;font:600 13px/1.2 system-ui;opacity:0.95;transition:opacity .3s";
+                        document.body.appendChild(el);
+                        setTimeout(() => { el.style.opacity = "0"; setTimeout(() => el.remove(), 300); }, 2000);
+                    }
+                }
+            });
         </script>
+        <script src="js/dev-tools.js"></script>
     </body>
 </html>

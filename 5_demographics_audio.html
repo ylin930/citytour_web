@@ -19,25 +19,25 @@
       </header>
 
       <section class="grid">
-        <form id="demoForm" class="card" style="display: flex; flex-direction: column; gap: 16px">
+        <form id="demoForm" class="card" style="display: flex; flex-direction: column; gap: 24px">
           <!-- Status messages -->
           <!--<div id="guardMsg" class="hint" style="min-height:20px;"></div>-->
 
           <!-- Demographics (wrap so we can hide on S2/S3) -->
           <div id="demoBlock">
             <label class="label" for="age">Age</label>
-            <input
+            <select
               id="age"
               class="input"
-              type="number"
-              min="1"
-              max="110"
-              style="width: 100px; height: 25px; font-size: 1em; text-align: center" />
+              style="width: 120px; height: 35px; font-size: 1em; text-align: center">
+              <option value="">Select age</option>
+              <!-- Age options will be populated dynamically based on participant group -->
+            </select>
             <div id="ageError" class="hint" style="color: #b00020; min-height: 18px"></div>
 
             <div style="margin-top: 10px">
-              <div class="label" style="margin-bottom: 6px">Gender:</div>
-              <div style="display: flex; gap: 12px; flex-wrap: wrap">
+              <div class="label" style="margin-bottom: 6px; text-align: left">Gender:</div>
+              <div style="display: flex; gap: 12px; flex-wrap: wrap; justify-content: flex-start">
                 <label class="checkbox"><input type="radio" name="gender" value="female" /> Female</label>
                 <label class="checkbox"><input type="radio" name="gender" value="male" /> Male</label>
                 <label class="checkbox"><input type="radio" name="gender" value="nonbinary" /> Non-binary</label>
@@ -48,27 +48,38 @@
             </div>
           </div>
 
-          <hr id="dividerLine" />
+          <!-- Divider line between gender and audio check -->
+          <hr style="margin: 30px 0; border: none; border-top: 1px solid #e0e0e0;" />
 
           <!-- Audio check -->
           <div>
-            <div class="label">Audio check</div>
+            <div class="label" style="text-align: left">Audio check</div>
             <p class="sub" style="margin: 6px 0 12px 0">
-              Click “Play test sound”. If you hear the beep, select the checkbox.
+              Click "Play test sound" to hear a 5-second audio sample. If you hear the sound, select the checkbox.
             </p>
 
-            <div style="display: flex; gap: 8px; align-items: center; flex-wrap: wrap">
+            <div style="display: flex; gap: 8px; align-items: center; flex-wrap: wrap; justify-content: flex-start">
               <button type="button" id="playBtn" class="btn">Play test sound</button>
+              <button type="button" id="stopBtn" class="btn" style="display: none;">Stop sound</button>
               <label class="checkbox" style="margin-left: 8px">
                 <input type="checkbox" id="heard" /> I heard the sound
               </label>
             </div>
+            
+            <div id="audioStatus" class="hint" style="margin-top: 8px; min-height: 18px;"></div>
+            <div id="troubleshooting" class="hint" style="margin-top: 8px; display: none; color: #666; font-size: 0.9em;">
+              <strong>Troubleshooting:</strong><br>
+              • Check your device volume and ensure it's not muted<br>
+              • Try using headphones or external speakers<br>
+              • Make sure your browser allows audio playback<br>
+              • Try refreshing the page and testing again
+            </div>
           </div>
 
-          <div id="msg" class="hint" style="min-height: 20px"></div>
+          <div id="msg" class="hint" style="min-height: 20px; margin: 20px 0;"></div>
 
-          <div class="buttons" style="justify-content: flex-end; gap: 10px">
-            <button type="button" class="btn" onclick="window.location.href='instructions.html'">Back</button>
+          <div class="buttons" style="justify-content: flex-end; gap: 10px; margin: 20px 0;">
+            <button type="button" class="btn" onclick="window.location.href='4_instructions.html'">Back</button>
             <button id="continueBtn" type="submit" class="btn primary" disabled>Save & Begin Task</button>
           </div>
         </form>
@@ -80,9 +91,12 @@
 
     <!-- Page logic -->
     <script type="module">
+      console.log("Demographics page - loading flow.js module");
       import { initApp } from "./js/flow.js";
       import { doc, getDoc, updateDoc } from "https://www.gstatic.com/firebasejs/10.13.1/firebase-firestore.js";
       import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.13.1/firebase-auth.js";
+
+      console.log("Demographics page - JavaScript starting");
 
       // ---------- Elements ----------
       const form = document.getElementById("demoForm");
@@ -93,17 +107,32 @@
       const msgEl = document.getElementById("msg");
       const guardMsg = document.getElementById("guardMsg");
       const groupNote = document.getElementById("groupNote");
-      const playBtn = document.getElementById("playBtn");
       const sessionBadge = document.getElementById("sessionBadge");
       const demoBlock = document.getElementById("demoBlock");
+
+      console.log("Demographics page - elements found:", {
+        form: !!form,
+        ageEl: !!ageEl,
+        heardEl: !!heardEl,
+        contBtn: !!contBtn
+      });
 
       const setMsg = (t) => (msgEl.textContent = t || "");
 
       // ---------- Participant guard ----------
       const pid = localStorage.getItem("ct.participantId");
+      console.log("Demographics page - participant ID from localStorage:", pid);
+      console.log("Demographics page - all localStorage values:", {
+        "ct.participantId": localStorage.getItem("ct.participantId"),
+        "ct.group": localStorage.getItem("ct.group"),
+        "ct_role": localStorage.getItem("ct_role"),
+        "ct_language": localStorage.getItem("ct_language"),
+        "ct.lang": localStorage.getItem("ct.lang")
+      });
       if (!pid) {
+        console.log("No participant ID found, redirecting to ID check");
         guardMsg.textContent = "Missing participant ID. Redirecting…";
-        setTimeout(() => (window.location.href = "id_check.html"), 800);
+        setTimeout(() => (window.location.href = "3_id_check.html"), 800);
       }
 
       // ---------- Init Firebase & wait for anon auth ----------
@@ -128,17 +157,28 @@
 
       try {
         const pSnap = await getDoc(doc(db, "participants", pid));
+        console.log("Database query result - exists:", pSnap.exists());
         if (!pSnap.exists()) {
+          console.log("Participant not found in database, redirecting to ID check");
           guardMsg.textContent = "Participant not found. Redirecting…";
-          setTimeout(() => (window.location.href = "id_check.html"), 800);
+          setTimeout(() => (window.location.href = "3_id_check.html"), 800);
         } else {
           const data = pSnap.data();
           participantGroup = data?.group || null;
+          
+          console.log("Participant data from database:", data);
+          console.log("Participant group from database:", participantGroup);
 
           const nextSession = data?.nextSession ?? 1;
           sessionBadge.textContent = `CITY TOUR • Session ${nextSession}`;
 
           needsDemographics = nextSession === 1;
+          
+          // Populate age dropdown based on participant group
+          if (participantGroup) {
+            console.log("Populating dropdown with group from database:", participantGroup);
+            populateAgeDropdown(participantGroup);
+          }
           // 3) Hide the age/gender block + divider line on S2/S3
           if (!needsDemographics && demoBlock) {
             demoBlock.style.display = "none";
@@ -161,39 +201,251 @@
         guardMsg.textContent = `Could not load participant info (${e?.code || "unknown"}). Please reload or re-enter your ID.`;
       }
 
-      // ---------- Web Audio beep (no files) ----------
+      // Fallback: populate age dropdown even if participant group is not found
+      if (!participantGroup) {
+        console.log("No participant group from database, trying localStorage fallback");
+        // Try to get group from localStorage as fallback
+        const fallbackGroup = (localStorage.getItem("ct.group") || "").toLowerCase();
+        console.log("No participant group found, trying localStorage:", fallbackGroup);
+        console.log("All localStorage values:", {
+          "ct.group": localStorage.getItem("ct.group"),
+          "ct_role": localStorage.getItem("ct_role"),
+          "ct_language": localStorage.getItem("ct_language"),
+          "ct.lang": localStorage.getItem("ct.lang"),
+          "ct.participantId": localStorage.getItem("ct.participantId")
+        });
+        if (fallbackGroup === "adult" || fallbackGroup === "child") {
+          participantGroup = fallbackGroup;
+          console.log("Using localStorage group:", participantGroup);
+          populateAgeDropdown(participantGroup);
+        } else {
+          // Show all ages as fallback
+          console.log("No group found, showing all ages");
+          populateAgeDropdown("unknown");
+        }
+      } else {
+        console.log("Participant group found from database:", participantGroup);
+      }
+      
+      // Always populate dropdown as final fallback
+      const ageSelect = document.getElementById("age");
+      const optionCount = ageSelect ? ageSelect.options.length : 0;
+      console.log("Final check - dropdown has", optionCount, "options, participantGroup:", participantGroup);
+      if (!ageSelect || optionCount <= 1) {
+        console.log("Dropdown not populated, forcing population with group:", participantGroup || "unknown");
+        populateAgeDropdown(participantGroup || "unknown");
+      }
+
+      // ---------- Age Dropdown Population ----------
+      function populateAgeDropdown(group) {
+        console.log("=== POPULATE AGE DROPDOWN CALLED ===");
+        console.log("Populating age dropdown for group:", group);
+        const ageSelect = document.getElementById("age");
+        console.log("Age select element found:", !!ageSelect);
+        if (!ageSelect) {
+          console.error("Age select element not found!");
+          return;
+        }
+        
+        // Clear existing options except the first one
+        ageSelect.innerHTML = '<option value="">Select age</option>';
+        
+        if (group === "child") {
+          // Children: ages 4-10
+          console.log("Adding child ages 4-10");
+          for (let age = 4; age <= 10; age++) {
+            const option = document.createElement("option");
+            option.value = age;
+            option.textContent = age;
+            ageSelect.appendChild(option);
+          }
+        } else if (group === "adult") {
+          // Adults: ages 18-35
+          console.log("Adding adult ages 18-35");
+          for (let age = 18; age <= 35; age++) {
+            const option = document.createElement("option");
+            option.value = age;
+            option.textContent = age;
+            ageSelect.appendChild(option);
+          }
+        } else {
+          // Fallback: show all ages 4-35
+          console.log("Adding all ages 4-35 as fallback");
+          for (let age = 4; age <= 35; age++) {
+            const option = document.createElement("option");
+            option.value = age;
+            option.textContent = age;
+            ageSelect.appendChild(option);
+          }
+        }
+        console.log("Age dropdown populated with", ageSelect.options.length, "options");
+      }
+
+      // ---------- Enhanced Audio Test (5-second sample) ----------
       let audioCtx = null;
-      async function playBeep() {
+      let currentOscillator = null;
+      let audioTimeout = null;
+      let audioStartTime = null;
+      let isPlaying = false;
+
+      // Audio elements will be declared in setupAudioEventListeners function
+
+      async function playAudioTest() {
         try {
-          if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-          if (audioCtx.state === "suspended") await audioCtx.resume();
+          console.log("Starting audio test...");
+          
+          const playBtn = document.getElementById("playBtn");
+          const stopBtn = document.getElementById("stopBtn");
+          const audioStatus = document.getElementById("audioStatus");
+          const troubleshooting = document.getElementById("troubleshooting");
+          
+          if (!audioCtx) {
+            audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            console.log("Created new AudioContext:", audioCtx.state);
+          }
+          
+          if (audioCtx.state === "suspended") {
+            console.log("Resuming suspended AudioContext...");
+            await audioCtx.resume();
+            console.log("AudioContext resumed:", audioCtx.state);
+          }
+
+          // Stop any existing audio
+          stopAudio();
 
           const osc = audioCtx.createOscillator();
           const gain = audioCtx.createGain();
+          currentOscillator = osc;
+          
           osc.type = "sine";
-          osc.frequency.value = 880;
-
+          osc.frequency.value = 440; // Lower, more pleasant tone
+          
           const now = audioCtx.currentTime;
           gain.gain.setValueAtTime(0.0001, now);
-          gain.gain.exponentialRampToValueAtTime(0.2, now + 0.02);
-          gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.32);
+          gain.gain.exponentialRampToValueAtTime(0.15, now + 0.1);
+          gain.gain.setValueAtTime(0.15, now + 0.1);
+          gain.gain.exponentialRampToValueAtTime(0.0001, now + 5.0);
 
           osc.connect(gain);
           gain.connect(audioCtx.destination);
+          
+          console.log("Starting oscillator...");
           osc.start(now);
-          osc.stop(now + 0.34);
+          osc.stop(now + 5.0);
+          console.log("Oscillator started and scheduled to stop");
+
+          isPlaying = true;
+          audioStartTime = Date.now();
+          if (playBtn) playBtn.style.display = "none";
+          if (stopBtn) stopBtn.style.display = "inline-block";
+          if (audioStatus) audioStatus.textContent = "Playing audio test... (5 seconds)";
+          if (troubleshooting) troubleshooting.style.display = "none";
+
+          // Set timeout to show troubleshooting if not checked after 5 seconds
+          audioTimeout = setTimeout(() => {
+            if (!heardEl || !heardEl.checked) {
+              if (audioStatus) audioStatus.textContent = "Audio test completed. Did you hear the sound?";
+              if (troubleshooting) troubleshooting.style.display = "block";
+            }
+          }, 5000);
+
+          // Auto-stop when audio ends
+          setTimeout(() => {
+            if (isPlaying) {
+              stopAudio();
+            }
+          }, 5000);
+
         } catch (err) {
           console.error("Audio play failed:", err);
-          setMsg("Audio couldn't play. Check system volume / mute switch and try again.");
+          audioStatus.textContent = `Audio couldn't play: ${err.message}. Check system volume and try again.`;
+          troubleshooting.style.display = "block";
         }
       }
-      playBtn.addEventListener("click", () => {
-        playBeep();
-      });
+
+      function stopAudio() {
+        const playBtn = document.getElementById("playBtn");
+        const stopBtn = document.getElementById("stopBtn");
+        const audioStatus = document.getElementById("audioStatus");
+        
+        if (currentOscillator) {
+          try {
+            currentOscillator.stop();
+          } catch (e) {
+            // Oscillator might already be stopped
+          }
+          currentOscillator = null;
+        }
+        
+        if (audioTimeout) {
+          clearTimeout(audioTimeout);
+          audioTimeout = null;
+        }
+        
+        isPlaying = false;
+        if (playBtn) playBtn.style.display = "inline-block";
+        if (stopBtn) stopBtn.style.display = "none";
+        
+        if (audioStatus) {
+          if (audioStartTime && Date.now() - audioStartTime < 5000) {
+            audioStatus.textContent = "Audio stopped early.";
+          } else {
+            audioStatus.textContent = "Audio test completed.";
+          }
+        }
+      }
+
+      // Wait for DOM to be ready before adding event listeners
+      if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', () => {
+          setupAudioEventListeners();
+        });
+      } else {
+        setupAudioEventListeners();
+      }
+      
+      function setupAudioEventListeners() {
+        console.log("=== SETUP AUDIO EVENT LISTENERS CALLED ===");
+        const playBtn = document.getElementById("playBtn");
+        const stopBtn = document.getElementById("stopBtn");
+        
+        console.log("Audio elements found:", {
+          playBtn: !!playBtn,
+          stopBtn: !!stopBtn
+        });
+        
+        if (playBtn) {
+          playBtn.addEventListener("click", playAudioTest);
+          console.log("Play button event listener added");
+        } else {
+          console.error("Play button not found!");
+        }
+        
+        if (stopBtn) {
+          stopBtn.addEventListener("click", stopAudio);
+          console.log("Stop button event listener added");
+        } else {
+          console.error("Stop button not found!");
+        }
+      }
+
+      // Auto-stop audio when checkbox is checked
+      if (heardEl) {
+        heardEl.addEventListener("change", () => {
+          if (heardEl.checked && isPlaying) {
+            stopAudio();
+            const audioStatus = document.getElementById("audioStatus");
+            if (audioStatus) audioStatus.textContent = "Audio stopped. Thank you for confirming you heard the sound.";
+          }
+        });
+        console.log("Heard checkbox event listener added");
+      } else {
+        console.error("Heard checkbox not found!");
+      }
 
       // ---------- Validation ----------
       function validate() {
-        const audioOk = heardEl.checked;
+        const audioOk = heardEl ? heardEl.checked : false;
 
         // Sessions 2 & 3: only audio is required
         if (!needsDemographics) {
@@ -202,21 +454,21 @@
         }
 
         // Session 1 requires age + gender + audio + group-age consistency
-        const ageVal = Number(ageEl.value);
-        const hasAge = Number.isFinite(ageVal) && ageVal > 0 && ageVal < 120;
+        const ageVal = ageEl.value ? Number(ageEl.value) : null;
         const gender = document.querySelector('input[name="gender"]:checked')?.value || null;
 
         let ageOk = false;
         let ageMsg = "";
+        let hasAge = false;
 
-        if (!hasAge) {
-          ageMsg = "";
-        } else if (participantGroup === "adult") {
-          ageOk = ageVal >= 18;
-          if (!ageOk) ageMsg = "You selected you’re an ADULT participant — please check your age input (must be 18+).";
+        if (participantGroup === "adult") {
+          hasAge = ageVal !== null && ageVal >= 18 && ageVal <= 35;
+          ageOk = hasAge;
+          if (ageVal !== null && !ageOk) ageMsg = "You selected you're an ADULT participant — please check your age input (must be 18-35).";
         } else if (participantGroup === "child") {
-          ageOk = ageVal >= 4 && ageVal <= 17;
-          if (!ageOk) ageMsg = "You selected you’re a CHILD participant — please check your age input (must be 4–17).";
+          hasAge = ageVal !== null && ageVal >= 4 && ageVal <= 10;
+          ageOk = hasAge;
+          if (ageVal !== null && !ageOk) ageMsg = "You selected you're a CHILD participant — please check your age input (must be 4-10).";
         } else {
           ageMsg = "Participant type missing. Please go back and re-enter your ID.";
         }
@@ -237,17 +489,17 @@
 
         try {
           if (needsDemographics) {
-            const age = Number(ageEl.value) || null;
+            const age = ageEl.value ? Number(ageEl.value) : null;
             const gender = document.querySelector('input[name="gender"]:checked')?.value || null;
 
             // Final guards
-            if (participantGroup === "adult" && !(age >= 18)) {
-              setMsg("Please correct your age: adult participants must be 18 or older.");
+            if (participantGroup === "adult" && !(age >= 18 && age <= 35)) {
+              setMsg("Please correct your age: adult participants must be 18-35.");
               validate();
               return;
             }
-            if (participantGroup === "child" && !(age >= 4 && age <= 17)) {
-              setMsg("Please correct your age: child participants must be 4–17.");
+            if (participantGroup === "child" && !(age >= 4 && age <= 10)) {
+              setMsg("Please correct your age: child participants must be 4-10.");
               validate();
               return;
             }
@@ -261,7 +513,12 @@
           }
 
           setMsg("Saved. Redirecting…");
-          window.location.href = "session_video.html";
+          
+          // Initialize session to 1 when starting the session video flow
+          localStorage.setItem("ct.session", "1");
+          console.log("Demographics - initializing session to 1");
+          
+          window.location.href = "6_session_video.html?session=1";
         } catch (err) {
           console.error("Save failed:", err);
           setMsg(`Error saving: ${err?.code || ""} ${err?.message || ""}`);

@@ -28,8 +28,12 @@
                 <div id="scrollHint" class="sub" style="text-align: center; color: #666">
                     ▼ Continue to scroll to read the full instruction
                 </div>
+
+                <!-- Divider line -->
+                <hr style="margin: 30px 0; border: none; border-top: 1px solid #e0e0e0;" />
+
                 <!-- Simple acknowledgment -->
-                <div class="card">
+                <div style="margin: 20px 0;">
                     <label class="checkbox" style="margin-top: 1px">
                         <input type="checkbox" id="ack" />
                         <span id="ackLabel">I have read and understand the instructions.</span>
@@ -38,9 +42,9 @@
                     <div id="instrError" class="hint" style="margin-top: 8px"></div>
                 </div>
 
-                <div class="progress"><span style="width: 30%"></span></div>
+                <div class="progress" style="margin: 30px 0 20px 0;"><span style="width: 30%"></span></div>
 
-                <div class="buttons" style="justify-content: space-between">
+                <div class="buttons" style="justify-content: space-between; margin: 20px 0;">
                     <button class="btn" onclick="goBack()">Back</button>
                     <button id="continue" class="btn primary" disabled>Continue</button>
                 </div>
@@ -51,7 +55,7 @@
             // Safe Back
             function goBack() {
                 if (document.referrer && document.referrer !== window.location.href) history.back();
-                else location.href = "consent.html";
+                else location.href = "3_id_check.html";
             }
 
             //// Read choices
@@ -61,6 +65,15 @@
             // Read choices  ✅ prefer new keys; fallback to old keys
             const lang = (localStorage.getItem("ct.lang") || localStorage.getItem("ct_language") || "EN").toUpperCase(); // "EN"/"GER"
             const role = (localStorage.getItem("ct.group") || localStorage.getItem("ct_role") || "adult").toLowerCase(); // "adult"/"child"
+
+            // Debug logging
+            console.log("Instructions page - localStorage values:");
+            console.log("ct.lang:", localStorage.getItem("ct.lang"));
+            console.log("ct_language:", localStorage.getItem("ct_language"));
+            console.log("ct.group:", localStorage.getItem("ct.group"));
+            console.log("ct_role:", localStorage.getItem("ct_role"));
+            console.log("Final lang:", lang);
+            console.log("Final role:", role);
 
             // Country is derived from language ONLY (requirement: EN→US, GER→DE)
             const country = lang === "GER" ? "DE" : "US";
@@ -93,6 +106,9 @@
             // Load instruction HTML (depends ONLY on language + role; country is derived above)
             const key = `${country}_${role}_${lang}`; // e.g., US_child_EN or DE_adult_GER
             const filePath = `instructions/instructions_${key}.html`;
+            
+            console.log("Instructions file path:", filePath);
+            console.log("Constructed key:", key);
 
             fetch(filePath, { cache: "no-store" })
                 .then((r) => {
@@ -101,6 +117,8 @@
                 })
                 .then((html) => {
                     el("instructionText").innerHTML = html;
+                    // Re-check scroll requirements after content loads
+                    setTimeout(checkScrollRequirement, 50);
                 })
                 .catch((err) => {
                     el("instructionText").innerHTML =
@@ -124,11 +142,31 @@
                 if (instrError) instrError.textContent = "";
             }
 
+            // Check if scrolling is needed
+            function checkScrollRequirement() {
+                const needsScroll = instrBox.scrollHeight > instrBox.clientHeight;
+                console.log("Scroll needed:", needsScroll, "scrollHeight:", instrBox.scrollHeight, "clientHeight:", instrBox.clientHeight);
+                
+                if (!needsScroll) {
+                    // No scrolling needed, enable checkbox immediately
+                    ack.disabled = false;
+                    if (scrollHint) scrollHint.style.display = "none";
+                    clearInstrError();
+                } else {
+                    // Scrolling needed, show hint and require scroll
+                    ack.disabled = true;
+                    if (scrollHint) scrollHint.style.display = "block";
+                }
+            }
+
             // lock initially
             ack.disabled = true;
             continueBtn.disabled = true;
 
-            // unlock after scrolling to bottom
+            // Check scroll requirement after content loads
+            setTimeout(checkScrollRequirement, 100);
+
+            // unlock after scrolling to bottom (only if scrolling is needed)
             instrBox.addEventListener("scroll", () => {
                 const atBottom = instrBox.scrollTop + instrBox.clientHeight >= instrBox.scrollHeight - 10;
                 if (atBottom) {
@@ -138,14 +176,19 @@
                 }
             });
 
-            // Explain if they try to click early (capture on the whole card area)
-            const ackArea = document.querySelector(".card label.checkbox").parentElement; // the card that contains the checkbox
+            // Explain if they try to click early (capture on the checkbox area)
+            const ackArea = document.querySelector("label.checkbox").parentElement; // the div that contains the checkbox
             ackArea.addEventListener(
                 "pointerdown",
                 (e) => {
                     if (ack.disabled) {
                         e.preventDefault();
-                        showInstrError("Please scroll to the end before checking “I have read the instructions”.");
+                        const needsScroll = instrBox.scrollHeight > instrBox.clientHeight;
+                        if (needsScroll) {
+                            showInstrError("Please scroll to the end before checking \"I have read the instructions\".");
+                        } else {
+                            showInstrError("Please wait for the page to load completely.");
+                        }
                         instrBox.focus({ preventScroll: false });
                     }
                 },
@@ -166,7 +209,7 @@
                     return;
                 }
                 localStorage.setItem("ct_instructionsAck", "yes");
-                location.href = "demographics_audio.html";
+                location.href = "5_demographics_audio.html";
             });
         </script>
       <script src="js/dev-tools.js"></script>

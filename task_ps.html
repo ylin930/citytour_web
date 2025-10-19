@@ -397,10 +397,10 @@
 
     <script>
       (function () {
-        const RE = /data-?brackets-?id\s*=\s*['"]?\d+['"]?/i;
+        // Use RegExp constructor so live preview doesn't choke on /.../ literals
+        const RE = new RegExp("data-?brackets-?id\\s*=\\s*['\"]?\\d+['\"]?", "i");
 
         function scrub(root) {
-          // Remove text nodes that contain the pattern
           const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
           const toKill = [];
           for (let n = walker.nextNode(); n; n = walker.nextNode()) {
@@ -408,7 +408,6 @@
           }
           toKill.forEach((n) => n.remove());
 
-          // As a belt-and-suspenders, remove any elements whose *only* child is that text
           root.querySelectorAll("*").forEach((el) => {
             if (el.childNodes.length === 1 && el.firstChild.nodeType === 3 && RE.test(el.firstChild.nodeValue)) {
               el.firstChild.remove();
@@ -416,24 +415,24 @@
           });
         }
 
-        // Initial pass
+        const start = () => scrub(document.body);
         if (document.readyState === "loading") {
-          document.addEventListener("DOMContentLoaded", () => scrub(document.body));
+          document.addEventListener("DOMContentLoaded", start, { once: true });
         } else {
-          scrub(document.body);
+          start();
         }
 
-        // Keep it clean while Live Preview mutates the DOM
         new MutationObserver((muts) => {
           for (const m of muts) {
             if (m.type === "characterData" && RE.test(m.target.nodeValue)) {
               m.target.remove();
             }
-            m.addedNodes &&
+            if (m.addedNodes) {
               m.addedNodes.forEach((node) => {
                 if (node.nodeType === 3 && RE.test(node.nodeValue)) node.remove();
                 else if (node.nodeType === 1) scrub(node);
               });
+            }
           }
         }).observe(document.body, { subtree: true, childList: true, characterData: true });
       })();

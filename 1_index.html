@@ -11,7 +11,7 @@
         <main class="container">
             <header class="header">
                 <div>
-                    <div class="header">CITY TOUR STUDY</div>
+                    <div class="badge">CITY TOUR STUDY</div>
                     <div class="body" id="title">Choose your language</div>
                     <div class="sub" id="subtitle">Bitte wählen Sie Ihre Sprache • Please select your language</div>
                 </div>
@@ -114,6 +114,7 @@
             // save + go
 
             btn.addEventListener("click", () => {
+                console.log("Index page - chosen values:", chosen);
                 localStorage.setItem("ct_language", chosen.lang);
                 localStorage.setItem("ct_country", chosen.country);
                 localStorage.setItem("ct_role", chosen.role);
@@ -123,11 +124,20 @@
                 const langCode = chosen.lang.toUpperCase().startsWith("G") ? "GER" : "EN"; // catch 'German'/'English'
                 const groupCode = chosen.role.toLowerCase().includes("child") ? "child" : "adult";
 
+                console.log("Index page - role:", chosen.role, "groupCode:", groupCode);
                 localStorage.setItem("ct.lang", langCode); // "EN" or "GER"
                 localStorage.setItem("ct.group", groupCode); // "adult" or "child"
 
-                // proceed to ID entry
-                location.href = "id_check.html";
+                console.log("Index page - stored values:", {
+                    "ct_language": chosen.lang,
+                    "ct_country": chosen.country,
+                    "ct_role": chosen.role,
+                    "ct.lang": langCode,
+                    "ct.group": groupCode
+                });
+
+                // proceed to consent
+                location.href = "2_consent.html";
             });
         </script>
       <script src="js/dev-tools.js"></script>

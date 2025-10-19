@@ -50,6 +50,7 @@
 
         <!-- Page logic, checks id to make sure it's on the ID list -->
         <script type="module">
+            console.log("ID check page - loading flow.js module");
             import { initApp, handleIdSubmit, showBlockedMessage } from "./js/flow.js";
 
             const { db } = initApp();
@@ -80,8 +81,10 @@
                     if (res?.blocked) {
                         showBlockedMessage(res.blocked);
                         validate(); // re-enable if blocked
+                    } else if (res?.ok) {
+                        // Success - always go to instructions after ID check
+                        window.location.href = "4_instructions.html";
                     }
-                    // success redirects inside handleIdSubmit()
                 } catch (err) {
                     console.error("ID check failed:", err);
                     msg("Sorry — something went wrong. Please try again.");

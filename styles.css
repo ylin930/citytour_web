@@ -1,80 +1,128 @@
 :root {
-  --bg: #ffffff;             /* overall background */
-  --panel: #ffffff;          /* card + main panel background */
-  --card: #f9fafb;           /* slight grey card tone */
-  --accent: #006c66;         /* your teal accent */
-  --accent2: #2ab3a3;        /* lighter teal for gradient partner */
-  --text: #1e1e1e;           /* main text color */
+  --bg: #ffffff; /* overall background */
+  --panel: #ffffff; /* card + main panel background */
+  --card: #f9fafb; /* slight grey card tone */
+  --accent: #006c66; /* your teal accent */
+  --accent2: #2ab3a3; /* lighter teal for gradient partner */
+  --text: #1e1e1e; /* main text color */
 }
 
-/* ---- Base ---- */
-html, body { height: 100%; }
-
-/* Make the page show the forest background */
-/* Background image layer */
+/* ---------- Base body (all non-task pages keep centered panel) ---------- */
+html,
 body {
-  position: relative;             /* create stacking context */
-  background: transparent;        /* don't cover the bg image */
+  height: 100%;
 }
+
+body {
+  font-family:
+    Inter,
+    system-ui,
+    -apple-system,
+    Segoe UI,
+    Roboto,
+    Arial,
+    sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 32px;
+}
+
+/* Optional soft background image for non-task pages */
 body::before {
   content: "";
   position: fixed;
   inset: 0;
-  background: url("backgrounds/forest_blur.jpg") center/cover no-repeat;
+  background: url("assets/bg.png") center/cover no-repeat;
   opacity: 0.5;
-  filter: blur(2px) brightness(1.08);
-  z-index: 0;                     /* behind content */
+  z-index: -1;
+  filter: blur(2px) brightness(1.1);
 }
-/* keep main content above the bg */
-main, .container, header, section { position: relative; z-index: 1; }
 
-/* ---------- Background stays visible ---------- */
-body {
-  position: relative;
-  background: transparent;              /* show the forest */
+/* ---------- Regular container (non-task pages) ---------- */
+.container {
+  width: min(920px, 94vw);
+  background: var(--panel);
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  border-radius: 20px;
+  padding: 32px;
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.06);
 }
-body::before {
+
+/* ---------- Task-stage pages (PS trials, etc.) ---------- */
+/* Opt-in by adding class="task-stage" on <body> AND class="stage" on <main> */
+
+body.task-stage {
+  position: relative;
+  background: transparent;
+  /* remove centering so the stage can control its own width */
+  display: block;
+  padding: 24px;
+}
+
+body.task-stage::before {
   content: "";
   position: fixed;
   inset: 0;
   background: url("backgrounds/forest_blur.jpg") center/cover no-repeat;
-  opacity: .55;
+  opacity: 0.55;
   filter: blur(2px) brightness(1.06);
-  z-index: 0;                           /* behind content */
+  z-index: 0;
 }
-main, .container, header, section { position: relative; z-index: 1; }
-html, body { overflow-x: hidden; }      /* never horizontal scroll */
 
-/* ---------- Stage container (task pages) ---------- */
-.container.stage {
-  width: min(1200px, 88vw);     /* narrower so no horizontal scroll */
-  margin: 0 auto;
-  padding: 20px;
+/* keep stage content above the bg overlay */
+body.task-stage main,
+body.task-stage .container,
+body.task-stage header,
+body.task-stage section {
+  position: relative;
+  z-index: 1;
+}
+
+/* Wide “stage” container ONLY for task pages */
+.container.stage{
+  width: min(1200px, 88vw);
+  margin-inline: auto;
   background: transparent;
   border: 0;
   box-shadow: none;
+  padding: 20px;
+  overflow-x: visible;
 }
 
 /* ---------- Header (keep your existing look) ---------- */
-.header { display: flex; align-items: center; gap: 14px; margin-bottom: 18px; }
-.badge { font-size: 12px; text-transform: uppercase; color: #777; letter-spacing: .08em; }
-.h1 { font-size: 28px; font-weight: 800; margin: 4px 0 2px; color: var(--text); }
-.sub { opacity: .8; font-size: 15px; }
+.header {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin-bottom: 18px;
+}
+.badge {
+  font-size: 12px;
+  text-transform: uppercase;
+  color: #777;
+  letter-spacing: 0.08em;
+}
+.h1 {
+  font-size: 28px;
+  font-weight: 800;
+  margin: 4px 0 2px;
+  color: var(--text);
+}
+.sub {
+  opacity: 0.8;
+  font-size: 15px;
+}
 
 /* ---------- White panel for the trial ---------- */
-.container.stage section.grid > .card {
-  background: #fff;
-  border: 1px solid rgba(0,0,0,.06);
-  border-radius: 20px;
-  box-shadow: 0 8px 30px rgba(0,0,0,0.08);
-  padding: 24px;
-  width: 100%;
+.container.stage section.grid > .card{
+  background:#fff;
+  border-radius:20px;
+  padding:32px 32px 56px;  /* space for buttons */
   overflow: visible;
-  display: flex;
-  flex-direction: column;
-  gap: 14px;
   position: relative;
-  padding-bottom: 90px; /* enough room for bottom buttons */
 }
 
 /* ---------- Choice grid (3 even columns, no clipping) ---------- */
@@ -89,56 +137,53 @@ html, body { overflow-x: hidden; }      /* never horizontal scroll */
 /* ---------- Choice cards ---------- */
 .choice {
   width: 100% !important;
-  max-width: 360px;       /* was 440px — narrower columns */
+  max-width: 360px; /* was 440px — narrower columns */
   border: 2px solid transparent;
   border-radius: 16px;
   background: #fff;
-  box-shadow: 0 6px 14px rgba(0,0,0,.08);
+  box-shadow: 0 6px 14px rgba(0, 0, 0, 0.08);
   overflow: hidden;
-  transition: transform .2s, box-shadow .2s, border-color .2s;
+  transition:
+    transform 0.2s,
+    box-shadow 0.2s,
+    border-color 0.2s;
 }
 
-/* Default layout for the trials section */
-#choices {
-  display: grid;
-}
 
 /* Center the guide during the intro */
-#choices.intro {
-  display: flex !important;          /* beat the default grid */
-  flex-direction: column;
-  justify-content: center;
+.choice-grid.intro {
+  display: flex !important;          /* override the grid */
   align-items: center;
+  justify-content: center;
+  gap: 0;
   min-height: 60vh;
-  gap: 12px;
-  background: transparent;
+  grid-template-columns: none !important; /* neutralize any grid columns */
 }
 
-#choices.intro img {
+.choice-grid.intro img {
   display: block;
-  width: auto;                        /* no stretch */
-  max-width: min(720px, 80vw);
-  max-height: 60vh;
+  margin: 0 auto;
+  width: min(70vw, 560px);           /* scales nicely on large/small screens */
   height: auto;
-  object-fit: contain;
   border-radius: 18px;
   box-shadow: 0 8px 24px rgba(0,0,0,.12);
 }
 
 
+
 .choice:hover {
   transform: scale(1.02);
-  box-shadow: 0 10px 28px rgba(0,0,0,0.15);
+  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.15);
 }
 .choice.selected {
-  border-color: #2563eb;                 /* blue ring */
-  box-shadow: 0 8px 24px rgba(37,99,235,.25);
+  border-color: #2563eb; /* blue ring */
+  box-shadow: 0 8px 24px rgba(37, 99, 235, 0.25);
 }
 
 /* ---------- Choice image & label ---------- */
 .choice img {
   width: 100%;
-  height: clamp(300px, 38vh, 460px);  /* shorter images */
+  height: clamp(300px, 38vh, 460px); /* shorter images */
   object-fit: contain;
   display: block;
   background: #f3f4f6;
@@ -149,7 +194,7 @@ html, body { overflow-x: hidden; }      /* never horizontal scroll */
   font-weight: 700;
   font-size: 1.05rem;
   line-height: 1.2;
-  white-space: normal;                   /* avoid clipping the text */
+  white-space: normal; /* avoid clipping the text */
 }
 
 /* ---------- Bottom-fixed controls ---------- */
@@ -160,52 +205,76 @@ html, body { overflow-x: hidden; }      /* never horizontal scroll */
   width: 100%;
   display: flex;
   justify-content: center;
-  pointer-events: none;                  /* don’t block clicks above */
+  pointer-events: none; /* don’t block clicks above */
 }
 .bottom-controls .controls-inner {
   display: flex;
   gap: 16px;
-  pointer-events: auto;                  /* re-enable clicking on buttons */
+  pointer-events: auto; /* re-enable clicking on buttons */
 }
 
 /* ---------- Buttons (keep your palette) ---------- */
 .btn {
   padding: 14px 20px;
   border-radius: 12px;
-  border: 1px solid rgba(0,0,0,.1);
+  border: 1px solid rgba(0, 0, 0, 0.1);
   background: #f3f3f3;
   color: var(--text);
   font-weight: 600;
   cursor: pointer;
-  transition: all .2s ease;
+  transition: all 0.2s ease;
 }
-.btn:hover { background: #e6f8f5; }
+.btn:hover {
+  background: #e6f8f5;
+}
 .btn.primary {
   background: linear-gradient(90deg, var(--accent), var(--accent2));
   color: #fff;
   border: none;
 }
-.btn.primary:hover { filter: brightness(1.05); }
-.btn:disabled { opacity: .55; cursor: not-allowed; }
+.btn.primary:hover {
+  filter: brightness(1.05);
+}
+.btn:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
 
 /* ---------- Responsive fallbacks ---------- */
 @media (max-width: 1200px) {
-  .container.stage { width: min(1100px, 94vw); }
-  .choice-grid { grid-template-columns: repeat(2, minmax(0, 1fr)) !important; }
+  .container.stage {
+    width: min(1100px, 94vw);
+  }
+  .choice-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  }
 }
 @media (max-width: 720px) {
-  .container.stage { width: 96vw; padding: 16px; }
-  .choice-grid { grid-template-columns: 1fr !important; }
-  .bottom-controls { position: static; margin-top: 16px; }
+  .container.stage {
+    width: 96vw;
+    padding: 16px;
+  }
+  .choice-grid {
+    grid-template-columns: 1fr !important;
+  }
+  .bottom-controls {
+    position: static;
+    margin-top: 16px;
+  }
 }
 
 /* ---------- Brackets Live Preview artifacts ---------- */
-html :where([data-brackets-id])::before { content: none !important; display: none !important; }
-
-/* Never render Brackets' debug attribute as pseudo-content */
-*[data-brackets-id]::before,
-*[data-brackets-id]::after {
-  content: "" !important;
+html :where([data-brackets-id])::before {
+  content: none !important;
   display: none !important;
 }
 
+/* Add near the bottom of styles.css */
+*[data-brackets-id]::before {
+  display: none !important;
+  content: none !important;
+}
+
+[data-brackets-id] {
+  visibility: visible;
+}
